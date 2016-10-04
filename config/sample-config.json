@@ -1,0 +1,22 @@
+{
+  "cluster": false,
+  "processes": 0,
+  "externalRoutes": {
+    "https://stage-new-york.flywheelsports.com": [
+      "[post]/api/v2/token/create",
+      "[get]/api/v2/user/self.json"
+    ]
+  },
+  "hydra": {
+    "serviceName": "hydra-router",
+    "serviceDescription": "Service Router",
+    "serviceIP": "",
+    "servicePort": 5353,
+    "serviceType": "router",
+    "redis": {
+      "url": "127.0.0.1",
+      "port": 6379,
+      "db": 15
+    }
+  }
+}
