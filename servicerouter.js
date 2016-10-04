@@ -2,7 +2,7 @@
 
 const Promise = require('bluebird');
 const redis = require('redis');
-const hydra = require('@flywheelsports/hydra');
+const hydra = require('@flywheelsports/fwsp-hydra');
 const ServerResponse = require('fwsp-server-response');
 const serverResponse = new ServerResponse;
 const Utils = require('fwsp-jsutils');
