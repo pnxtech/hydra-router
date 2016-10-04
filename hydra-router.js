@@ -107,6 +107,8 @@ function initWorker() {
       */
       let wss = new WebSocketServer({ server: server });
       wss.on('connection', (ws) => {
+        serviceRouter.markSocket(ws);
+        
         ws.on('message', (message) => {
           serviceRouter.routeWSMessage(ws, message);
         });

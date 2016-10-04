@@ -108,16 +108,18 @@ class ServiceRouter {
   * @param {object} message - UMF formated message
   */
   _handleIncomingChannelMessage(message) {
-    if (message.to.indexOf('hydra-router') > -1) {
-      if (message.body.action === 'refresh') {
-        this._refreshRoutes(message.body.serviceName);
-        return;
-      }
-
-      let client = message['for'];
-      if (client && wsClients[client]) {
-        let ws = wsClients[message['for']];
-        //TODO(CJ): fetch from redis hydra-router:wsclient:${client} hash
+    if (message.body.action === 'refresh') {
+      this._refreshRoutes(message.body.serviceName);
+      return;
+    }
+    if (message.via) {
+      let viaRoute = UMFMessage.parseRoute(message.via);
+      if (viaRoute.subID) {
+        let ws = wsClients[viaRoute.subID];
+        if (ws) {
+          delete message.via;
+          ws.send(Utils.safeJSONStringify(message));
+        }
       }
     }
   }
@@ -251,6 +253,18 @@ class ServiceRouter {
   }
 
   /**
+  * @name markSocket
+  * @summary Tags a websocket with an ID
+  * @param {object} ws - websocket
+  */
+  markSocket(ws) {
+    ws.id = Utils.shortID();
+    if (!wsClients[ws.id]) {
+      wsClients[ws.id] = ws;
+    }
+  }
+
+  /**
   * @name routeWSMessage
   * @summary Route a websocket message
   * @param {object} ws - websocket
@@ -304,10 +318,10 @@ class ServiceRouter {
     let toRoute = UMFMessage.parseRoute(msg.to);
     if (toRoute.instance !== '') {
       // message directed to a service instance
-      let newFromRoute = `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`;
+      let viaRoute = `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`;
       let channel = `${results[0].serviceName}:${results[0].instanceID}`;
       let newMessage = Object.assign(msg, {
-        from: newFromRoute
+        via: viaRoute
       });
       hydra.openPublisherChannel(channel);
       hydra.publishToChannel(channel, newMessage);
@@ -317,11 +331,12 @@ class ServiceRouter {
         .then((results) => {
           let toRoute = UMFMessage.parseRoute(msg.to);
           let newToRoute = `${results[0].instanceID}@${results[0].serviceName}:${toRoute.apiRoute}`;
-          let newFromRoute = `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`;
+          let viaRoute = `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`;
           let channel = `${results[0].serviceName}:${results[0].instanceID}`;
           let newMessage = Object.assign(msg, {
             to: newToRoute,
-            from: newFromRoute
+            from: msg.from,
+            via: viaRoute
           });
           hydra.openPublisherChannel(channel);
           hydra.publishToChannel(channel, newMessage);
