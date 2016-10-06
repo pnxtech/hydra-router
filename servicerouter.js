@@ -319,27 +319,19 @@ class ServiceRouter {
     if (toRoute.instance !== '') {
       // message directed to a service instance
       let viaRoute = `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`;
-      let channel = `${results[0].serviceName}:${results[0].instanceID}`;
       let newMessage = Object.assign(msg, {
         via: viaRoute
       });
-      hydra.openPublisherChannel(channel);
-      hydra.publishToChannel(channel, newMessage);
+      hydra.sendMessage(newMessage);
     } else {
       // message can be sent to any available instance
       hydra.getServicePresence(toRoute.serviceName)
         .then((results) => {
           let toRoute = UMFMessage.parseRoute(msg.to);
-          let newToRoute = `${results[0].instanceID}@${results[0].serviceName}:${toRoute.apiRoute}`;
-          let viaRoute = `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`;
-          let channel = `${results[0].serviceName}:${results[0].instanceID}`;
-          let newMessage = Object.assign(msg, {
-            to: newToRoute,
-            from: msg.from,
-            via: viaRoute
-          });
-          hydra.openPublisherChannel(channel);
-          hydra.publishToChannel(channel, newMessage);
+          hydra.sendReplyMessage(msg, UMFMessage.createMessage({
+            to: `${results[0].instanceID}@${results[0].serviceName}:${toRoute.apiRoute}`,
+            via: `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`
+          }));
         });
     }
   }
