@@ -1,4 +1,4 @@
-![logo](assets/hydra-router.jpg)
+![logo](hydra-router.png)
 # Hydra Router
 
 A [Dynamic Service Registry and Router](http://microservices.io/patterns/service-registry.html) for use with Hydra-enabled microservices.
