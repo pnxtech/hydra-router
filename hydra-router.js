@@ -22,8 +22,7 @@ let routeList = [
   '[get]/v1/router/version',
   '[get]/v1/router/refresh',
   '[get]/v1/router/refresh/:service',
-  '[post]/v1/router/message',
-  '[post]/v1/router/aws-webhook'
+  '[post]/v1/router/message'
 ];
 
 let config = require('fwsp-config');
@@ -108,7 +107,7 @@ function initWorker() {
       let wss = new WebSocketServer({ server: server });
       wss.on('connection', (ws) => {
         serviceRouter.markSocket(ws);
-        
+
         ws.on('message', (message) => {
           serviceRouter.routeWSMessage(ws, message);
         });

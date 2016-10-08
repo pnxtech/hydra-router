@@ -1,7 +1,6 @@
 'use strict';
 
 const Promise = require('bluebird');
-const redis = require('redis');
 const hydra = require('@flywheelsports/fwsp-hydra');
 const ServerResponse = require('fwsp-server-response');
 const serverResponse = new ServerResponse;
@@ -32,9 +31,6 @@ class ServiceRouter {
   * @param {object} routesObj - routes object
   */
   init(config, routesObj) {
-    this._connectToRedis(config.hydra);
-    this.redisdb.select(config.hydra.redis.db, (err, result) => {});
-
     Object.keys(routesObj).forEach((serviceName) => {
       let newRouteItems = [];
       let routes = routesObj[serviceName];
@@ -52,54 +48,6 @@ class ServiceRouter {
     });
     this.routerTable = routesObj;
     hydra.on('message', this._handleIncomingChannelMessage);
-  }
-
-  /**
-   * @name _connectToRedis
-   * @summary Configure access to redis and monitor emitted events.
-   * @private
-   * @param {object} config - redis client configuration
-   */
-  _connectToRedis(config) {
-    let redisConfig = Object.assign({
-      maxReconnectionPeriod: 60,
-      maxDelayBetweenReconnections: 5
-    }, config);
-
-    try {
-      let redisOptions = {
-        retry_strategy: (options) => {
-          if (options.total_retry_time > (1000 * redisConfig.maxReconnectionPeriod)) {
-            hydra.sendToHealthLog('error', 'Max redis connection retry period exceeded.');
-            process.exit(-10);
-            return;
-          }
-          // reconnect after
-          let reconnectionDelay = Math.floor(Math.random() * redisConfig.maxDelayBetweenReconnections * 1000) + 1000;
-          return reconnectionDelay;
-        }
-      };
-      this.redisdb = redis.createClient(redisConfig.redis.port, redisConfig.redis.url, redisOptions);
-      this.redisdb
-        .on('connect', () => {
-          hydra.sendToHealthLog('info', 'Successfully reconnected to redis server');
-          this.redisdb.select(redisConfig.redis.db);
-        })
-        .on('reconnecting', () => {
-          hydra.sendToHealthLog('error', 'Reconnecting to redis server...');
-        })
-        .on('warning', (warning) => {
-          hydra.sendToHealthLog('error', `Redis warning: ${warning}`);
-        })
-        .on('end', () => {
-          hydra.sendToHealthLog('error', 'Established Redis server connection has closed');
-        })
-        .on('error', (err) => {
-          hydra.sendToHealthLog('error', `Redis error: ${err}`);
-        });
-    } catch (e) {
-      hydra.sendToHealthLog('error', `Redis error: ${e.message}`);
-    }
   }
 
   /**
@@ -294,37 +242,14 @@ class ServiceRouter {
       return;
     }
 
-    // let fromRoute = UMFMessage.parseRoute(msg.from);
-    // if (!wsClients[fromRoute.serviceName]) {
-    //   wsClients[fromRoute.serviceName] = ws;
-    // }
-    //
-    // // push message onto service queue
-    // msg['for'] = fromRoute.serviceName;
-    // msg.from = 'hydra-router:/';
-    // hydra.queueMessage(msg);
-    //
-    // // notify service of new queued message
-    // let toRoute = UMFMessage.parseRoute(msg.to);
-    // hydra.sendMessage(toRoute.serviceName, hydra.createUMFMessage({
-    //   to: msg.to,
-    //   from: msg.from,
-    //   body: {
-    //     event: 'new:queued:message',
-    //     mid: msg.mid
-    //   }
-    // }));
-
     let toRoute = UMFMessage.parseRoute(msg.to);
     if (toRoute.instance !== '') {
-      // message directed to a service instance
       let viaRoute = `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`;
       let newMessage = Object.assign(msg, {
         via: viaRoute
       });
       hydra.sendMessage(newMessage);
     } else {
-      // message can be sent to any available instance
       hydra.getServicePresence(toRoute.serviceName)
         .then((results) => {
           let toRoute = UMFMessage.parseRoute(msg.to);
@@ -362,8 +287,6 @@ class ServiceRouter {
       this._handleRouteVersion(response);
     } else if (matchResult.pattern.indexOf('/v1/router/message') > -1) {
       this._handleMessage(request, response);
-    } else if (matchResult.pattern.indexOf('/v1/router/aws-webhook') > -1) {
-      this._handleAWSWebhook(request, response);
     } else {
       serverResponse.sendNotFound(response);
     }
@@ -514,60 +437,6 @@ class ServiceRouter {
             }
           });
         });
-    });
-  }
-
-  /**
-  * @name _handleAWSWebhook
-  * @summary Handles incoming messages from AWS SNS.
-  * @private
-  * @param {object} request - Node HTTP request object
-  * @param {object} response - Node HTTP response object
-  */
-  _handleAWSWebhook(request, response) {
-    let payload = '';
-    request.on('data', (data) => {
-      payload += data;
-    });
-    request.on('end', () => {
-      try {
-        payload = Utils.safeJSONParse(payload);
-      } catch (err) {
-        console.log(err);
-        serverResponse.sendInvalidRequest(response);
-        return;
-      }
-
-      if (payload.Type && payload.TopicArn) {
-        // if Payload Type and TopicArn fields exists then this is likely an AWS message
-        let topicSegments = payload.TopicArn.split(':');
-        let eventChannelName = topicSegments[5];
-        console.log(`Incoming ${eventChannelName} message via AWS SNS`);
-
-        if (payload.Type === 'SubscriptionConfirmation') {
-          serverResponse.sendOk(response);
-          let eventSegments = eventChannelName.split('_');
-          hydra.confirmSubscriptionToEventChannel(eventSegments[0], eventSegments[1], payload.Token)
-            .then((result) => {
-              // console.log(result);
-            })
-            .catch((err) => {
-              console.log('err', err);
-            });
-        } else if (payload.Type === 'Notification') {
-          try {
-            let message = Utils.safeJSONParse(payload.Message);
-            console.log('Message Body:', message);
-            hydra.makeAPIRequest(message);
-          } catch (err) {
-            console.log(err);
-          } finally {
-            serverResponse.sendOk(response);
-          }
-        }
-      } else {
-        serverResponse.sendOk(response);
-      }
     });
   }
 

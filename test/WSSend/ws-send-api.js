@@ -1,7 +1,7 @@
 'use strict';
 
 const Promise = require('bluebird');
-const hydra = require('@flywheelsports/hydra');
+const hydra = require('@flywheelsports/fwsp-hydra');
 const Utils = require('fwsp-jsutils');
 const UMFMessage = require('fwsp-umf-message');
 const WebSocket = require('ws');
