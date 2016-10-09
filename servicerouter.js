@@ -253,9 +253,10 @@ class ServiceRouter {
       hydra.getServicePresence(toRoute.serviceName)
         .then((results) => {
           let toRoute = UMFMessage.parseRoute(msg.to);
-          hydra.sendReplyMessage(msg, UMFMessage.createMessage({
+          hydra.sendMessage(UMFMessage.createMessage({
             to: `${results[0].instanceID}@${results[0].serviceName}:${toRoute.apiRoute}`,
-            via: `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`
+            via: `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`,
+            bdy: msg.bdy
           }));
         });
     }
