@@ -248,7 +248,6 @@ class ServiceRouter {
   markSocket(ws) {
     ws.id = Utils.shortID();
     if (!wsClients[ws.id]) {
-      console.log('tagging new socket', ws.id);
       wsClients[ws.id] = ws;
     }
   }
@@ -316,7 +315,6 @@ class ServiceRouter {
   */
   wsDisconnect(ws) {
     ws.close();
-    console.log('closing socket', ws.id);
     delete wsClients[ws.id];
   }
 
