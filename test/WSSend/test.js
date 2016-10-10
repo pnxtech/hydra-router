@@ -2,7 +2,7 @@
 
 const WebSocket = require('ws');
 
-let ws = new WebSocket('wss://gemini-staging.flywheelsports.com');
+let ws = new WebSocket('http://localhost:5353');
 
 ws.on('open', () => {
   let umf = {
@@ -14,7 +14,6 @@ ws.on('open', () => {
 });
 
 ws.on('message', (data, flags) => {
-  let msg = JSON.parse(data);
-  console.log(msg);
+  console.log(data);
   process.exit();
 });

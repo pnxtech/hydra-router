@@ -111,6 +111,10 @@ function initWorker() {
         ws.on('message', (message) => {
           serviceRouter.routeWSMessage(ws, message);
         });
+
+        ws.on('close', () => {
+          serviceRouter.wsDisconnect(ws);
+        });
       });
 
       /**

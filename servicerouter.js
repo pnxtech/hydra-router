@@ -67,6 +67,9 @@ class ServiceRouter {
         if (ws) {
           delete message.via;
           ws.send(Utils.safeJSONStringify(message));
+        } else {
+          // websocket not found - it was likely closed
+          //TODO(CJ): figure out what to do with message replies for closed sockets
         }
       }
     }
@@ -201,6 +204,43 @@ class ServiceRouter {
   }
 
   /**
+  * @name wsRouteThroughHttp
+  * @summary Route websocket request throuigh HTTP
+  * @param {object} ws - websocket
+  * @param {object} message - UMF message
+  */
+  wsRouteThroughHttp(ws, message) {
+    let longMessage = UMFMessage.messageToLong(message);
+    let replyMessage = UMFMessage.createMessage({
+      to: longMessage.from,
+      from: longMessage.to,
+      rmid: longMessage.mid,
+      body: {}
+    });
+
+    hydra.makeAPIRequest(message)
+      .then((data) => {
+        replyMessage.body = {
+          result: data.result
+        };
+        ws.send(Utils.safeJSONStringify(replyMessage));
+      })
+      .catch((err) => {
+        let reason;
+        if (err.result && err.result.reason) {
+          reason = err.result.reason;
+        } else {
+          reason = err.message;
+        }
+        replyMessage.body = {
+          error: true,
+          result: reason
+        };
+        ws.send(Utils.safeJSONStringify(replyMessage));
+      });
+  }
+
+  /**
   * @name markSocket
   * @summary Tags a websocket with an ID
   * @param {object} ws - websocket
@@ -208,6 +248,7 @@ class ServiceRouter {
   markSocket(ws) {
     ws.id = Utils.shortID();
     if (!wsClients[ws.id]) {
+      console.log('tagging new socket', ws.id);
       wsClients[ws.id] = ws;
     }
   }
@@ -216,7 +257,7 @@ class ServiceRouter {
   * @name routeWSMessage
   * @summary Route a websocket message
   * @param {object} ws - websocket
-  * @param {object} message - UMF message
+  * @param {string} message - UMF message in string format
   */
   routeWSMessage(ws, message) {
     let msg;
@@ -242,24 +283,41 @@ class ServiceRouter {
       return;
     }
 
-    let toRoute = UMFMessage.parseRoute(msg.to);
-    if (toRoute.instance !== '') {
-      let viaRoute = `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`;
-      let newMessage = Object.assign(msg, {
-        via: viaRoute
-      });
-      hydra.sendMessage(newMessage);
+    if (msg.to.indexOf('[') > -1 && msg.to.indexOf(']') > -1) {
+      // does to route point to an HTTP method? If ss, route through HTTP
+      // i.e. [get] [post] etc...
+      this.wsRouteThroughHttp(ws, msg);
     } else {
-      hydra.getServicePresence(toRoute.serviceName)
-        .then((results) => {
-          let toRoute = UMFMessage.parseRoute(msg.to);
-          hydra.sendMessage(UMFMessage.createMessage({
-            to: `${results[0].instanceID}@${results[0].serviceName}:${toRoute.apiRoute}`,
-            via: `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`,
-            bdy: msg.bdy
-          }));
+      let toRoute = UMFMessage.parseRoute(msg.to);
+      if (toRoute.instance !== '') {
+        let viaRoute = `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`;
+        let newMessage = Object.assign(msg, {
+          via: viaRoute
         });
+        hydra.sendMessage(newMessage);
+      } else {
+        hydra.getServicePresence(toRoute.serviceName)
+          .then((results) => {
+            let toRoute = UMFMessage.parseRoute(msg.to);
+            hydra.sendMessage(UMFMessage.createMessage({
+              to: `${results[0].instanceID}@${results[0].serviceName}:${toRoute.apiRoute}`,
+              via: `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`,
+              bdy: msg.bdy
+            }));
+          });
+      }
     }
+  }
+
+  /**
+  * @name wsDisconnect
+  * @summary handle websocket disconnect
+  * @param {object} ws - websocket
+  */
+  wsDisconnect(ws) {
+    ws.close();
+    console.log('closing socket', ws.id);
+    delete wsClients[ws.id];
   }
 
   /**
