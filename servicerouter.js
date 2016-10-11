@@ -290,7 +290,7 @@ class ServiceRouter {
       return;
     }
 
-    msg = UMFMessage.createMessage(msg);
+    msg = UMFMessage.createMessage(msg, msg.frm ? true : false);
 
     if (msg.to.indexOf('[') > -1 && msg.to.indexOf(']') > -1) {
       // does to route point to an HTTP method? If so, route through HTTP
