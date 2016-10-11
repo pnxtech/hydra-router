@@ -282,8 +282,10 @@ class ServiceRouter {
       return;
     }
 
+    msg = UMFMessage.createMessage(msg);
+
     if (msg.to.indexOf('[') > -1 && msg.to.indexOf(']') > -1) {
-      // does to route point to an HTTP method? If ss, route through HTTP
+      // does to route point to an HTTP method? If so, route through HTTP
       // i.e. [get] [post] etc...
       this.wsRouteThroughHttp(ws, msg);
     } else {
@@ -291,7 +293,8 @@ class ServiceRouter {
       if (toRoute.instance !== '') {
         let viaRoute = `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`;
         let newMessage = Object.assign(msg, {
-          via: viaRoute
+          via: viaRoute,
+          frm: msg.from
         });
         hydra.sendMessage(newMessage);
       } else {
@@ -301,8 +304,9 @@ class ServiceRouter {
             hydra.sendMessage(UMFMessage.createMessage({
               to: `${results[0].instanceID}@${results[0].serviceName}:${toRoute.apiRoute}`,
               via: `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`,
-              bdy: msg.bdy
-            }));
+              bdy: msg.body,
+              frm: msg.from
+            }, true));
           });
       }
     }
