@@ -108,9 +108,17 @@ class ServiceRouter {
   routeRequest(request, response) {
     return new Promise((resolve, reject) => {
 
-      // console.log('Request: ', request.url);
-      // console.log('  method:', request.method);
-      // console.log('  headers:', request.headers);
+      if (request.method === 'OPTIONS') {
+        response.writeHead(ServerResponse.HTTP_OK, {
+          'access-control-allow-origin': '*',
+          'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'access-control-allow-headers': 'content-type, accept',
+          'access-control-max-age': 10,
+          'Content-Type': 'application/json'
+        });
+        response.end();
+        return;
+      }
 
       let urlData = url.parse(`http://${request.headers['host']}${request.url}`);
       let matchResult = this._matchRoute(urlData);
