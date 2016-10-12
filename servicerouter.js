@@ -218,7 +218,7 @@ class ServiceRouter {
   * @param {object} message - UMF message
   */
   wsRouteThroughHttp(ws, message) {
-    let longMessage = UMFMessage.messageToLong(message);
+    let longMessage = UMFMessage.toLong(message);
     let replyMessage = UMFMessage.createMessage({
       to: longMessage.from,
       from: longMessage.to,
@@ -309,12 +309,12 @@ class ServiceRouter {
         hydra.getServicePresence(toRoute.serviceName)
           .then((results) => {
             let toRoute = UMFMessage.parseRoute(msg.to);
-            hydra.sendMessage(UMFMessage.createMessage({
+            hydra.sendMessage(UMFMessage.createMessageShort({
               to: `${results[0].instanceID}@${results[0].serviceName}:${toRoute.apiRoute}`,
               via: `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`,
               bdy: msg.body,
               frm: msg.from
-            }, true));
+            }));
           });
       }
     }

@@ -1,6 +1,6 @@
 {
   "name": "hydra-router",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "A service which routes requests to hydra-based microservices",
   "author": {
     "name": "Carlos Justiniano",
@@ -19,7 +19,7 @@
     "fwsp-config": "1.0.3",
     "fwsp-jsutils": "1.0.8",
     "fwsp-server-response": "2.2.3",
-    "fwsp-umf-message": "0.1.1",
+    "fwsp-umf-message": "0.2.0",
     "@flywheelsports/fwsp-hydra": "0.9.6",
     "bluebird": "3.4.6",
     "route-parser": "0.0.5",
