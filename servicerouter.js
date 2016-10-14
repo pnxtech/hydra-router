@@ -53,9 +53,10 @@ class ServiceRouter {
   /**
   * @name _handleIncomingChannelMessage
   * @summary Handle incoming UMF messages from other services
-  * @param {object} message - UMF formated message
+  * @param {object} msg - UMF formated message
   */
-  _handleIncomingChannelMessage(message) {
+  _handleIncomingChannelMessage(msg) {
+    let message = UMFMessage.toLong(msg);
     if (message.body.action === 'refresh') {
       this._refreshRoutes(message.body.serviceName);
       return;
@@ -65,8 +66,8 @@ class ServiceRouter {
       if (viaRoute.subID) {
         let ws = wsClients[viaRoute.subID];
         if (ws) {
-          delete message.via;
-          ws.send(Utils.safeJSONStringify(message));
+          delete msg.via;
+          ws.send(Utils.safeJSONStringify(msg));
         } else {
           // websocket not found - it was likely closed
           //TODO(CJ): figure out what to do with message replies for closed sockets
