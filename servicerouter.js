@@ -51,6 +51,17 @@ class ServiceRouter {
   }
 
   /**
+  * @name _sendWSMessage
+  * @summary send websocket message in short UMF format
+  * @param {object} ws - websocket
+  * @param {object} message - umf formatted message
+  */
+  _sendWSMessage(ws, message) {
+    let msg = UMFMessage.createMessage(message);
+    ws.send(Utils.safeJSONStringify(msg.toShort()));
+  }
+
+  /**
   * @name _handleIncomingChannelMessage
   * @summary Handle incoming UMF messages from other services
   * @param {object} msg - UMF formated message
@@ -67,7 +78,7 @@ class ServiceRouter {
         let ws = wsClients[viaRoute.subID];
         if (ws) {
           delete msg.via;
-          ws.send(Utils.safeJSONStringify(msg));
+          this._sendWSMessage(ws, msg);
         } else {
           // websocket not found - it was likely closed
           //TODO(CJ): figure out what to do with message replies for closed sockets
@@ -232,7 +243,7 @@ class ServiceRouter {
         replyMessage.body = {
           result: data.result
         };
-        ws.send(Utils.safeJSONStringify(replyMessage));
+        this._sendWSMessage(ws, replyMessage);
       })
       .catch((err) => {
         let reason;
@@ -245,7 +256,7 @@ class ServiceRouter {
           error: true,
           result: reason
         };
-        ws.send(Utils.safeJSONStringify(replyMessage));
+        this._sendWSMessage(ws, replyMessage);
       });
   }
 
@@ -278,7 +289,7 @@ class ServiceRouter {
       umf.body = {
         error: `Unable to parse: ${message}`
       };
-      ws.send(umf.toJSON());
+      this._sendWSMessage(ws, umf);
       return;
     }
 
@@ -286,7 +297,7 @@ class ServiceRouter {
       umf.body = {
         error: 'Message is not a valid UMF message'
       };
-      ws.send(umf.toJSON());
+      this._sendWSMessage(ws, umf);
       return;
     }
 
