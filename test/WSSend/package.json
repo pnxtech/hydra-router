@@ -7,11 +7,11 @@
     "node": ">=6.2.1"
   },
   "dependencies": {
-    "@flywheelsports/config": "1.0.3",
-    "@flywheelsports/hydra": "0.8.7",
-    "@flywheelsports/jsutils": "1.0.8",
-    "@flywheelsports/server-response": "2.2.3",
-    "@flywheelsports/umf-message": "0.0.8",
+    "fwsp-config": "1.0.3",
+    "@flywheelsports/fwsp-hydra": "0.9.10",
+    "fwsp-jsutils": "1.0.8",
+    "fwsp-server-response": "2.2.3",
+    "fwsp-umf-message": "0.3.1",
     "bluebird": "3.4.1",
     "commander": "2.9.0",
     "ws": "1.1.1"

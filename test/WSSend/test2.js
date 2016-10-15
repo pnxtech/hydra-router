@@ -2,13 +2,16 @@
 
 const WebSocket = require('ws');
 const UMFMessage = require('fwsp-umf-message');
-let ws = new WebSocket('http://localhost:5353');
+
+let ws = new WebSocket('http://192.168.1.10');
 
 ws.on('open', () => {
-  let umf = UMFMessage({
-    'to': 'hydra-router:[GET]/v1/router/list/nodes',
+  let umf = UMFMessage.create({
+    'to': 'hc-pylights:/',
     'from': 'client:/',
-    'body': {}
+    'body': {
+			'cmd': 'red'
+		}
   });
   ws.send(umf.toJSON());
 });
