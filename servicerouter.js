@@ -293,7 +293,7 @@ class ServiceRouter {
       return;
     }
 
-    if (!umf.validateMessage()) {
+    if (!msg.validateMessage()) {
       umf.body = {
         error: 'Message is not a valid UMF message'
       };
@@ -301,7 +301,6 @@ class ServiceRouter {
       return;
     }
 
-    msg = UMFMessage.createMessage(msg);
     if (msg.to.indexOf('[') > -1 && msg.to.indexOf(']') > -1) {
       // does route point to an HTTP method? If so, route through HTTP
       // i.e. [get] [post] etc...
