@@ -13,7 +13,7 @@ class ApiCommand {
       'from': 'client:/',
       'body': {}
     });
-    ws.send(umf.toJSON());
+    ws.send(Utils.safeJSONStringify(umf));
   }
 
   onMessage(msg) {

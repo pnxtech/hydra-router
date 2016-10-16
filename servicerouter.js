@@ -155,7 +155,7 @@ class ServiceRouter {
             if (request.headers['authorization']) {
               message.authorization = request.headers['authorization'];
             }
-            hydra.makeAPIRequest(message)
+            hydra.makeAPIRequest(message.toJSON())
               .then((data) => {
                 serverResponse.sendResponse(data.statusCode, response, {
                   result: data.result
@@ -189,7 +189,7 @@ class ServiceRouter {
           if (request.headers['authorization']) {
             message.authorization = request.headers['authorization'];
           }
-          hydra.makeAPIRequest(UMFMessage.createMessage(message))
+          hydra.makeAPIRequest(UMFMessage.createMessage(message).toJSON())
             .then((data) => {
               if (data.headers) {
                 let headers = {
@@ -238,12 +238,12 @@ class ServiceRouter {
       body: {}
     });
 
-    hydra.makeAPIRequest(message)
+    hydra.makeAPIRequest(longMessage.toJSON())
       .then((data) => {
         replyMessage.body = {
           result: data.result
         };
-        this._sendWSMessage(ws, replyMessage);
+        this._sendWSMessage(ws, replyMessage.toJSON());
       })
       .catch((err) => {
         let reason;
@@ -256,7 +256,7 @@ class ServiceRouter {
           error: true,
           result: reason
         };
-        this._sendWSMessage(ws, replyMessage);
+        this._sendWSMessage(ws, replyMessage.toJSON());
       });
   }
 
@@ -289,41 +289,42 @@ class ServiceRouter {
       umf.body = {
         error: `Unable to parse: ${message}`
       };
-      this._sendWSMessage(ws, umf);
+      this._sendWSMessage(ws, umf.toJSON());
       return;
     }
 
-    if (!msg.validateMessage()) {
+    if (!msg.validate()) {
       umf.body = {
         error: 'Message is not a valid UMF message'
       };
-      this._sendWSMessage(ws, umf);
+      this._sendWSMessage(ws, umf.toJSON());
       return;
     }
 
     if (msg.to.indexOf('[') > -1 && msg.to.indexOf(']') > -1) {
       // does route point to an HTTP method? If so, route through HTTP
       // i.e. [get] [post] etc...
-      this.wsRouteThroughHttp(ws, msg);
+      this.wsRouteThroughHttp(ws, msg.toJSON());
     } else {
       let toRoute = UMFMessage.parseRoute(msg.to);
       if (toRoute.instance !== '') {
         let viaRoute = `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`;
-        let newMessage = Object.assign(msg, {
+        let newMessage = Object.assign(msg.toJSON(), {
           via: viaRoute,
           from: msg.from
         });
-        hydra.sendMessage(newMessage);
+        hydra.sendMessage(newMessage.toJSON());
       } else {
         hydra.getServicePresence(toRoute.serviceName)
           .then((results) => {
             let toRoute = UMFMessage.parseRoute(msg.to);
-            hydra.sendMessage(UMFMessage.createMessage({
+            let newMsg = UMFMessage.createMessage({
               to: `${results[0].instanceID}@${results[0].serviceName}:${toRoute.apiRoute}`,
               via: `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`,
               body: msg.body,
               from: msg.from
-            }));
+            });
+            hydra.sendMessage(newMsg.toJSON());
           });
       }
     }
@@ -502,7 +503,7 @@ class ServiceRouter {
         from: 'hydra-router:/',
         body: umf.body
       });
-      hydra.makeAPIRequest(forwardMessage)
+      hydra.makeAPIRequest(forwardMessage.toJSON())
         .then((data) => {
           serverResponse.sendResponse(data.statusCode, response, {
             result: data.result
