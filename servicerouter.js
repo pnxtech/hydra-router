@@ -313,7 +313,7 @@ class ServiceRouter {
           via: viaRoute,
           from: msg.from
         });
-        hydra.sendMessage(newMessage.toJSON());
+        hydra.sendMessage(newMessage);
       } else {
         hydra.getServicePresence(toRoute.serviceName)
           .then((results) => {
