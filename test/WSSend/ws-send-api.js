@@ -12,7 +12,7 @@ class ApiCommand {
       'to': path,
       'from': 'client:/',
       'body': {}
-    }, true);
+    });
     ws.send(Utils.safeJSONStringify(umf));
   }
 
@@ -22,8 +22,6 @@ class ApiCommand {
 
   process() {
     let path = process.argv[2];
-
-console.log('path', path);
 
     let json = {
       'hydra': {

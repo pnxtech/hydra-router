@@ -51,12 +51,23 @@ class ServiceRouter {
   }
 
   /**
+  * @name _sendWSMessage
+  * @summary send websocket message in short UMF format
+  * @param {object} ws - websocket
+  * @param {object} message - umf formatted message
+  */
+  _sendWSMessage(ws, message) {
+    let msg = UMFMessage.createMessage(message);
+    ws.send(Utils.safeJSONStringify(msg.toShort()));
+  }
+
+  /**
   * @name _handleIncomingChannelMessage
   * @summary Handle incoming UMF messages from other services
   * @param {object} msg - UMF formated message
   */
   _handleIncomingChannelMessage(msg) {
-    let message = UMFMessage.toLong(msg);
+    let message = UMFMessage.createMessage(msg);
     if (message.body.action === 'refresh') {
       this._refreshRoutes(message.body.serviceName);
       return;
@@ -67,7 +78,7 @@ class ServiceRouter {
         let ws = wsClients[viaRoute.subID];
         if (ws) {
           delete msg.via;
-          ws.send(Utils.safeJSONStringify(msg));
+          this._sendWSMessage(ws, msg);
         } else {
           // websocket not found - it was likely closed
           //TODO(CJ): figure out what to do with message replies for closed sockets
@@ -136,7 +147,7 @@ class ServiceRouter {
             body += data;
           });
           request.on('end', () => {
-            let message = hydra.createUMFMessage({
+            let message = UMFMessage.createMessage({
               to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${request.url}`,
               from: 'hydra-router:/',
               body: Utils.safeJSONParse(body)
@@ -144,7 +155,7 @@ class ServiceRouter {
             if (request.headers['authorization']) {
               message.authorization = request.headers['authorization'];
             }
-            hydra.makeAPIRequest(message)
+            hydra.makeAPIRequest(message.toJSON())
               .then((data) => {
                 serverResponse.sendResponse(data.statusCode, response, {
                   result: data.result
@@ -178,7 +189,7 @@ class ServiceRouter {
           if (request.headers['authorization']) {
             message.authorization = request.headers['authorization'];
           }
-          hydra.makeAPIRequest(hydra.createUMFMessage(message))
+          hydra.makeAPIRequest(UMFMessage.createMessage(message).toJSON())
             .then((data) => {
               if (data.headers) {
                 let headers = {
@@ -219,7 +230,7 @@ class ServiceRouter {
   * @param {object} message - UMF message
   */
   wsRouteThroughHttp(ws, message) {
-    let longMessage = UMFMessage.toLong(message);
+    let longMessage = UMFMessage.createMessage(message);
     let replyMessage = UMFMessage.createMessage({
       to: longMessage.from,
       from: longMessage.to,
@@ -227,12 +238,12 @@ class ServiceRouter {
       body: {}
     });
 
-    hydra.makeAPIRequest(message)
+    hydra.makeAPIRequest(longMessage.toJSON())
       .then((data) => {
         replyMessage.body = {
           result: data.result
         };
-        ws.send(Utils.safeJSONStringify(replyMessage));
+        this._sendWSMessage(ws, replyMessage.toJSON());
       })
       .catch((err) => {
         let reason;
@@ -245,7 +256,7 @@ class ServiceRouter {
           error: true,
           result: reason
         };
-        ws.send(Utils.safeJSONStringify(replyMessage));
+        this._sendWSMessage(ws, replyMessage.toJSON());
       });
   }
 
@@ -268,54 +279,52 @@ class ServiceRouter {
   * @param {string} message - UMF message in string format
   */
   routeWSMessage(ws, message) {
-    let msg;
     let umf = UMFMessage.createMessage({
       'to': 'client:/',
       'from': 'hydra-router:/'
     });
 
-    msg = Utils.safeJSONParse(message);
+    let msg = UMFMessage.createMessage(Utils.safeJSONParse(message));
     if (!msg) {
       umf.body = {
         error: `Unable to parse: ${message}`
       };
-      ws.send(Utils.safeJSONStringify(umf));
+      this._sendWSMessage(ws, umf.toJSON());
       return;
     }
 
-    if (!UMFMessage.validateMessage(msg)) {
+    if (!msg.validate()) {
       umf.body = {
         error: 'Message is not a valid UMF message'
       };
-      ws.send(Utils.safeJSONStringify(umf));
+      this._sendWSMessage(ws, umf.toJSON());
       return;
     }
 
-    msg = UMFMessage.createMessage(msg, msg.frm ? true : false);
-
     if (msg.to.indexOf('[') > -1 && msg.to.indexOf(']') > -1) {
-      // does to route point to an HTTP method? If so, route through HTTP
+      // does route point to an HTTP method? If so, route through HTTP
       // i.e. [get] [post] etc...
-      this.wsRouteThroughHttp(ws, msg);
+      this.wsRouteThroughHttp(ws, msg.toJSON());
     } else {
       let toRoute = UMFMessage.parseRoute(msg.to);
       if (toRoute.instance !== '') {
         let viaRoute = `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`;
-        let newMessage = Object.assign(msg, {
+        let newMessage = Object.assign(msg.toJSON(), {
           via: viaRoute,
-          frm: msg.from
+          from: msg.from
         });
         hydra.sendMessage(newMessage);
       } else {
         hydra.getServicePresence(toRoute.serviceName)
           .then((results) => {
             let toRoute = UMFMessage.parseRoute(msg.to);
-            hydra.sendMessage(UMFMessage.createMessageShort({
+            let newMsg = UMFMessage.createMessage({
               to: `${results[0].instanceID}@${results[0].serviceName}:${toRoute.apiRoute}`,
               via: `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`,
-              bdy: msg.body,
-              frm: msg.from
-            }));
+              body: msg.body,
+              from: msg.from
+            });
+            hydra.sendMessage(newMsg.toJSON());
           });
       }
     }
@@ -476,25 +485,25 @@ class ServiceRouter {
   * @param {object} response - Node HTTP response object
   */
   _handleMessage(request, response) {
-    let umfMessage = '';
+    let umf = '';
     request.on('data', (data) => {
-      umfMessage += data;
+      umf += data;
     });
     request.on('end', () => {
       try {
-        umfMessage = Utils.safeJSONParse(umfMessage);
+        umf = UMFMessage.createMessage(Utils.safeJSONParse(umf));
       } catch (err) {
         console.log(err);
         serverResponse.sendInvalidRequest(response);
         return;
       }
 
-      let forwardMessage = hydra.createUMFMessage({
-        to: umfMessage.forward,
+      let forwardMessage = UMFMessage.createMessage({
+        to: umf.forward,
         from: 'hydra-router:/',
-        body: umfMessage.body
+        body: umf.body
       });
-      hydra.makeAPIRequest(forwardMessage)
+      hydra.makeAPIRequest(forwardMessage.toJSON())
         .then((data) => {
           serverResponse.sendResponse(data.statusCode, response, {
             result: data.result
