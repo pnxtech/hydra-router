@@ -120,11 +120,13 @@ class ServiceRouter {
   routeRequest(request, response) {
     return new Promise((resolve, reject) => {
 
+      // Handle CORS preflight
       if (request.method === 'OPTIONS') {
+        // allow-headers below are in lowercase per: https://nodejs.org/api/http.html#http_message_headers
         response.writeHead(ServerResponse.HTTP_OK, {
           'access-control-allow-origin': '*',
           'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'access-control-allow-headers': 'content-type, accept',
+          'access-control-allow-headers': 'authorization, content-type, accept',
           'access-control-max-age': 10,
           'Content-Type': 'application/json'
         });
