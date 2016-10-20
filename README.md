@@ -62,6 +62,14 @@ Messages are expected to be in the [UMF message format](https://github.com/cjus/
 
 > ☕ An example is provided in the included `test/apitester.paw` PAW file.
 
+## Website traffic passthrough
+
+Hydra-router is able to route site requests to microservices. So a microservice can serve a website in addition to responding to RESTful API calls and processing messages. This feature isn't intended for high traffic usage scenarios. Rather, this feature is intended for admin pages, status pages and other low-traffic situations. While images and other binary assets can be served - it's recommended that you use a CDN to offload requests for common static assets.
+
+The benefits of using this feature is that you may launch services on dynamic ports on arbitrary IP's and leverage the router to find individual service instances. In this way, website requests can be handled by multiple load balanced service instances.
+
+In order for this feature to work a service must serve its web content from a sub-folder which contains the same name as the service. So for a service called `instructor-service` there must be a `public/instructor-service` folder which hosts the sites static files.
+
 ## HTTP proxy passthrough
 Hydra-router allows you to specify routes to non-hydra services. Essentially this allows external clients to make API requests through hydra to backend servers.
 
