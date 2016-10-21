@@ -138,7 +138,6 @@ class ServiceRouter {
       let requestUrl = request.url;
       let urlData = url.parse(`http://${request.headers['host']}${requestUrl}`);
       let matchResult = this._matchRoute(urlData);
-
       if (!matchResult) {
         if (request.headers['referer']) {
           Object.keys(this.serviceNames).forEach((serviceName) => {
@@ -146,7 +145,6 @@ class ServiceRouter {
               matchResult = {
                 serviceName
               };
-              requestUrl = `/${serviceName}${requestUrl}`;
             }
           });
         }
@@ -200,13 +198,19 @@ class ServiceRouter {
           * Route non POST and PUT message types.
           */
 
-          // if request isn't a JSON request the locate an service instance and passthrough the request in plain HTTP
+          // if request isn't a JSON request then locate an service instance and passthrough the request in plain HTTP
           if (request.headers['content-type'] !== 'application/json') {
             hydra.getServicePresence(matchResult.serviceName)
               .then((presenceInfo) => {
                 if (presenceInfo.length > 0) {
                   let idx = Math.floor(Math.random() * presenceInfo.length);
                   let presence = presenceInfo[idx];
+
+                  let segs = requestUrl.split('/');
+                  if (segs[1] === matchResult.serviceName) {
+                    requestUrl = '';
+                  }
+
                   let url = `http://${presence.ip}:${presence.port}${requestUrl}`;
                   serverRequest
                     .get(url)

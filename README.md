@@ -68,8 +68,6 @@ Hydra-router is able to route site requests to microservices. So a microservice 
 
 The benefits of using this feature is that you may launch services on dynamic ports on arbitrary IP's and leverage the router to find individual service instances. In this way, website requests can be handled by multiple load balanced service instances.
 
-In order for this feature to work a service must serve its web content from a sub-folder which contains the same name as the service. So for a service called `instructor-service` there must be a `public/instructor-service` folder which hosts the sites static files.
-
 ## HTTP proxy passthrough
 Hydra-router allows you to specify routes to non-hydra services. Essentially this allows external clients to make API requests through hydra to backend servers.
 
