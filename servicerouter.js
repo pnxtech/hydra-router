@@ -49,6 +49,7 @@ class ServiceRouter {
       routesObj[serviceName] = newRouteItems;
     });
     this.routerTable = routesObj;
+    this._refreshRoutes();
     hydra.on('message', this._handleIncomingChannelMessage);
   }
 
@@ -136,17 +137,44 @@ class ServiceRouter {
       }
 
       let requestUrl = request.url;
+
+      if (requestUrl[requestUrl.length-1] === '/') {
+        response.writeHead(302, {
+          'Location': requestUrl.substring(0, requestUrl.length - 1)
+        });
+        response.end();
+        return;
+      }
+
       let urlData = url.parse(`http://${request.headers['host']}${requestUrl}`);
+
       let matchResult = this._matchRoute(urlData);
       if (!matchResult) {
         if (request.headers['referer']) {
-          Object.keys(this.serviceNames).forEach((serviceName) => {
+          let k = Object.keys(this.serviceNames);
+          for (let i = 0; i < k.length; i += 1) {
+            let serviceName = k[i];
             if (request.headers['referer'].indexOf(`/${serviceName}`) > -1) {
               matchResult = {
                 serviceName
               };
+              break;
             }
-          });
+          }
+        }
+      }
+
+      if (!matchResult) {
+        let segs = urlData.path.split('/');
+        if (this.serviceNames[segs[1]]) {
+          matchResult = {
+            serviceName: segs[1]
+          };
+          segs.splice(1,1);
+          requestUrl = segs.join('/');
+          if (requestUrl === '/') {
+            requestUrl = '';
+          }
         }
       }
 
