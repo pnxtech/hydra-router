@@ -49,6 +49,7 @@ class ServiceRouter {
       routesObj[serviceName] = newRouteItems;
     });
     this.routerTable = routesObj;
+    this._refreshRoutes();
     hydra.on('message', this._handleIncomingChannelMessage);
   }
 
