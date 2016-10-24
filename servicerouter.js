@@ -227,7 +227,7 @@ class ServiceRouter {
           */
 
           // if request isn't a JSON request then locate an service instance and passthrough the request in plain HTTP
-          if (request.headers['content-type'] === undefined || request.headers['content-type'] !== 'application/json') {
+          if (request.headers['content-type'] !== 'application/json') {
             hydra.getServicePresence(matchResult.serviceName)
               .then((presenceInfo) => {
                 if (presenceInfo.length > 0) {
@@ -240,9 +240,12 @@ class ServiceRouter {
                   }
 
                   let url = `http://${presence.ip}:${presence.port}${requestUrl}`;
-                  serverRequest
-                    .get(url)
-                    .pipe(response);
+                  let options = {
+                    uri: url,
+                    method: request.method,
+                    headers: request.headers
+                  };
+                  serverRequest(options).pipe(response);
                 } else {
                   serverResponse.sendResponse(ServerResponse.HTTP_SERVICE_UNAVAILABLE, response, {
                     result: {
