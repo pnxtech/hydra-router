@@ -48,9 +48,9 @@ class ServiceRouter {
       });
       routesObj[serviceName] = newRouteItems;
     });
+    hydra.on('message', this._handleIncomingChannelMessage);
     this.routerTable = routesObj;
     this._refreshRoutes();
-    hydra.on('message', this._handleIncomingChannelMessage);
   }
 
   /**
@@ -245,7 +245,13 @@ class ServiceRouter {
                     method: request.method,
                     headers: request.headers
                   };
-                  serverRequest(options).pipe(response);
+                  serverRequest(options, (error, response, body) => {
+                    if (error) {
+                      if (error.code === 'ECONNREFUSED') {
+                        // caller is no longer available.
+                      }
+                    }
+                  }).pipe(response);
                 } else {
                   serverResponse.sendResponse(ServerResponse.HTTP_SERVICE_UNAVAILABLE, response, {
                     result: {
