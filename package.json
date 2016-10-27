@@ -1,6 +1,6 @@
 {
   "name": "fwsp-hydra-router",
-  "version": "1.5.20",
+  "version": "1.5.21",
   "description": "A service which routes requests to hydra-based microservices",
   "author": {
     "name": "Carlos Justiniano",

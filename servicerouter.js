@@ -405,6 +405,13 @@ class ServiceRouter {
       } else {
         hydra.getServicePresence(toRoute.serviceName)
           .then((results) => {
+            if (!results.length) {
+              umf.body = {
+                error: `No ${toRoute.serviceName} instances available`
+              };
+              this._sendWSMessage(ws, umf.toJSON());
+              return;
+            }
             let toRoute = UMFMessage.parseRoute(msg.to);
             let newMsg = UMFMessage.createMessage({
               to: `${results[0].instanceID}@${results[0].serviceName}:${toRoute.apiRoute}`,
