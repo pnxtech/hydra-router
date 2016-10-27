@@ -10,6 +10,7 @@ const url = require('url');
 const querystring = require('querystring');
 const Route = require('route-parser');
 const version = require('./package.json').version;
+const serverRequest = require('request');
 
 let wsClients = {};
 
@@ -20,6 +21,7 @@ let wsClients = {};
 class ServiceRouter {
   constructor() {
     this.routerTable = null;
+    this.serviceNames = {};
     serverResponse.enableCORS(true);
     this._handleIncomingChannelMessage = this._handleIncomingChannelMessage.bind(this);
   }
@@ -47,6 +49,7 @@ class ServiceRouter {
       routesObj[serviceName] = newRouteItems;
     });
     this.routerTable = routesObj;
+    this._refreshRoutes();
     hydra.on('message', this._handleIncomingChannelMessage);
   }
 
@@ -119,7 +122,6 @@ class ServiceRouter {
   */
   routeRequest(request, response) {
     return new Promise((resolve, reject) => {
-
       // Handle CORS preflight
       if (request.method === 'OPTIONS') {
         // allow-headers below are in lowercase per: https://nodejs.org/api/http.html#http_message_headers
@@ -134,8 +136,48 @@ class ServiceRouter {
         return;
       }
 
-      let urlData = url.parse(`http://${request.headers['host']}${request.url}`);
+      let requestUrl = request.url;
+
+      if (requestUrl[requestUrl.length-1] === '/') {
+        response.writeHead(302, {
+          'Location': requestUrl.substring(0, requestUrl.length - 1)
+        });
+        response.end();
+        return;
+      }
+
+      let urlData = url.parse(`http://${request.headers['host']}${requestUrl}`);
+
       let matchResult = this._matchRoute(urlData);
+      if (!matchResult) {
+        if (request.headers['referer']) {
+          let k = Object.keys(this.serviceNames);
+          for (let i = 0; i < k.length; i += 1) {
+            let serviceName = k[i];
+            if (request.headers['referer'].indexOf(`/${serviceName}`) > -1) {
+              matchResult = {
+                serviceName
+              };
+              break;
+            }
+          }
+        }
+      }
+
+      if (!matchResult) {
+        let segs = urlData.path.split('/');
+        if (this.serviceNames[segs[1]]) {
+          matchResult = {
+            serviceName: segs[1]
+          };
+          segs.splice(1,1);
+          requestUrl = segs.join('/');
+          if (requestUrl === '/') {
+            requestUrl = '';
+          }
+        }
+      }
+
       if (matchResult) {
         if (matchResult.serviceName === 'hydra-router') {
           this._handleRouterRequest(matchResult, request, response);
@@ -150,7 +192,7 @@ class ServiceRouter {
           });
           request.on('end', () => {
             let message = UMFMessage.createMessage({
-              to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${request.url}`,
+              to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
               from: 'hydra-router:/',
               body: Utils.safeJSONParse(body)
             });
@@ -183,15 +225,49 @@ class ServiceRouter {
           /**
           * Route non POST and PUT message types.
           */
+
+          // if request isn't a JSON request then locate an service instance and passthrough the request in plain HTTP
+          if (request.headers['content-type'] !== 'application/json') {
+            hydra.getServicePresence(matchResult.serviceName)
+              .then((presenceInfo) => {
+                if (presenceInfo.length > 0) {
+                  let idx = Math.floor(Math.random() * presenceInfo.length);
+                  let presence = presenceInfo[idx];
+
+                  let segs = requestUrl.split('/');
+                  if (segs[1] === matchResult.serviceName) {
+                    requestUrl = '';
+                  }
+
+                  let url = `http://${presence.ip}:${presence.port}${requestUrl}`;
+                  let options = {
+                    uri: url,
+                    method: request.method,
+                    headers: request.headers
+                  };
+                  serverRequest(options).pipe(response);
+                } else {
+                  serverResponse.sendResponse(ServerResponse.HTTP_SERVICE_UNAVAILABLE, response, {
+                    result: {
+                      reason: `Unavailable ${matchResult.serviceName} instances`
+                    }
+                  });
+                }
+              });
+            return;
+          }
+
+          // this is a JSON request, package in a UMF message.
           let message = {
-            to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${request.url}`,
+            to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
             from: 'hydra-router:/',
             body: {}
           };
           if (request.headers['authorization']) {
             message.authorization = request.headers['authorization'];
           }
-          hydra.makeAPIRequest(UMFMessage.createMessage(message).toJSON())
+          let msg = UMFMessage.createMessage(message).toJSON();
+          hydra.makeAPIRequest(msg)
             .then((data) => {
               if (data.headers) {
                 let headers = {
@@ -202,9 +278,19 @@ class ServiceRouter {
                 response.write(data.body);
                 response.end();
               } else {
-                serverResponse.sendResponse(data.statusCode, response, {
-                  result: data.result
-                });
+                if (data.statusCode) {
+                  serverResponse.sendResponse(data.statusCode, response, {
+                    result: data.result
+                  });
+                } else if (data.code) {
+                  serverResponse.sendResponse(data.code, response, {
+                    result: {}
+                  });
+                } else {
+                  serverResponse.sendResponse(serverResponse.HTTP_NOT_FOUND, response, {
+                    result: {}
+                  });
+                }
               }
               resolve();
             })
@@ -530,6 +616,7 @@ class ServiceRouter {
     hydra.getAllServiceRoutes()
       .then((routesObj) => {
         Object.keys(routesObj).forEach((serviceName) => {
+          this.serviceNames[serviceName] = true;
           if (!service || service == serviceName) {
             let newRouteItems = [];
             let routes = routesObj[serviceName];
@@ -541,6 +628,12 @@ class ServiceRouter {
               newRouteItems.push({
                 pattern: routePattern,
                 route: new Route(routePattern)
+              });
+            });
+            [`/${serviceName}`, `/${serviceName}/`, `/${serviceName}/:rest`].forEach((pattern) => {
+              newRouteItems.push({
+                pattern: pattern,
+                route: new Route(pattern)
               });
             });
             this.routerTable[serviceName] = newRouteItems;

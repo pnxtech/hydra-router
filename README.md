@@ -1,16 +1,22 @@
 ![logo](hydra-router.png)
 
-A [Dynamic Service Registry and Router](http://microservices.io/patterns/service-registry.html) for use with Hydra-enabled microservices.
+Hydra Router is a service-aware router which can direct HTTP and websocket message requests to registered services.
 
 ## Introduction
 
-Using Hydra, microservices can locate one another using functions such as [findService](https://github.com/flywheelsports/hydra#findservice), [sendServiceMessage](https://github.com/flywheelsports/hydra#sendservicemessage) and [makeAPIRequest](https://github.com/flywheelsports/hydra#makeapirequest). This all works quite well without the need for DNS or a service router.
+Using hydra router, external clients can connect to services without knowing their IP or port information. Hydra router takes care of service discovery and routing.
 
-![service-peers](assets/service-peers.jpg)
+Additionally, hydra router can route to a website being hosted by a service.  If the router is accessed using a service name as the first url path segment and the request is an HTTP GET call then the request is routed to an available service instance.
+
+When more than one service instance exists for a type of service, requests made through the hydra router are load balanced among available instances.
+
+Hydra router also exposes a RESTful endpoint which can be used to query service health and presence information.  
+
+
+Using Hydra, microservices can locate one another using functions such as [findService](https://github.com/flywheelsports/hydra#findservice), [sendServiceMessage](https://github.com/flywheelsports/hydra#sendservicemessage) and [makeAPIRequest](https://github.com/flywheelsports/hydra#makeapirequest). This all works quite well without the need for DNS or a service router.
 
 However, when remote API requests arrive into the cloud infrastructure, determining how to **flexibly** route requests intended for upstream services becomes problematic. Consider that services may launch using different IPs and or random ports. To handle these requirements one approach involves the use of DNS, Elastic Load Balancers, and Elastic IPs. One still has to manage the machines attached to each load balancer and running multiple services on a machine further complicates the situation.
 
-![dns-approach](assets/dns-approach.jpg)
 
 This is where Dynamic Service Registries and Routers come into play. They're designed to simplify the above requirements by being services-aware and performing intelligent routing.
 
@@ -61,6 +67,12 @@ In addition to routing plain-old HTTP messages to their designated services, Hyd
 Messages are expected to be in the [UMF message format](https://github.com/cjus/umf) and are thus routable to other microservices within a network.
 
 > ☕ An example is provided in the included `test/apitester.paw` PAW file.
+
+## Website traffic passthrough
+
+Hydra-router is able to route site requests to microservices. So a microservice can serve a website in addition to responding to RESTful API calls and processing messages. This feature isn't intended for high traffic usage scenarios. Rather, this feature is intended for admin pages, status pages and other low-traffic situations. While images and other binary assets can be served - it's recommended that you use a CDN to offload requests for common static assets.
+
+The benefits of using this feature is that you may launch services on dynamic ports on arbitrary IP's and leverage the router to find individual service instances. In this way, website requests can be handled by multiple load balanced service instances.
 
 ## HTTP proxy passthrough
 Hydra-router allows you to specify routes to non-hydra services. Essentially this allows external clients to make API requests through hydra to backend servers.
