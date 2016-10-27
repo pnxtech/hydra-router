@@ -134,6 +134,7 @@ function initWorker() {
       */
       routesObj = Object.assign(routesObj, config.externalRoutes);
       serviceRouter.init(config, routesObj);
+      return null; // to silence promise warning: http://goo.gl/rRqMUw
     })
     .catch((err) => {
       console.log('err', err);
