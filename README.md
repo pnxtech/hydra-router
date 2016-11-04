@@ -4,27 +4,26 @@ Hydra Router is a service-aware router which can direct HTTP and websocket messa
 
 ## Introduction
 
-Using hydra router, external clients can connect to services without knowing their IP or port information. Hydra router takes care of service discovery and routing.
+Using hydra router external clients can connect to services without knowing their IP or port information. Hydra router takes care of service discovery and routing.
 
-Additionally, hydra router can route to a website being hosted by a service.  If the router is accessed using a service name as the first url path segment and the request is an HTTP GET call then the request is routed to an available service instance.
+Additionally, hydra router can route to a website being hosted by a service.  If the router is accessed using a service name as the first url path segment and the request is an HTTP GET call, then the request is routed to an available service instance.
 
 When more than one service instance exists for a type of service, requests made through the hydra router are load balanced among available instances.
 
 Hydra router also exposes a RESTful endpoint which can be used to query service health and presence information.  
 
-
-Using Hydra, microservices can locate one another using functions such as [findService](https://github.com/flywheelsports/hydra#findservice), [sendServiceMessage](https://github.com/flywheelsports/hydra#sendservicemessage) and [makeAPIRequest](https://github.com/flywheelsports/hydra#makeapirequest). This all works quite well without the need for DNS or a service router.
+Using Hydra microservices can locate one another using functions such as [findService](https://github.com/flywheelsports/hydra#findservice), [sendServiceMessage](https://github.com/flywheelsports/hydra#sendservicemessage) and [makeAPIRequest](https://github.com/flywheelsports/hydra#makeapirequest). This all works quite well without the need for DNS, or a service router.
 
 However, when remote API requests arrive into the cloud infrastructure, determining how to **flexibly** route requests intended for upstream services becomes problematic. Consider that services may launch using different IPs and or random ports. To handle these requirements one approach involves the use of DNS, Elastic Load Balancers, and Elastic IPs. One still has to manage the machines attached to each load balancer and running multiple services on a machine further complicates the situation.
 
 
 This is where Dynamic Service Registries and Routers come into play. They're designed to simplify the above requirements by being services-aware and performing intelligent routing.
 
-Hydra-Router, using Hydra, implements a Dynamic Service Registry and Router. To do so, it uses the route information that Hydra-enabled services publish during their start-up and initialization phase. It then routes incoming messages directly to services regardless of the following challenges:
+Hydra-Router, using Hydra, implements a Dynamic Service Registry and Router. To do so, it uses the route information that Hydra-enabled services publishes during their start-up and initialization phase. It then routes incoming messages directly to services regardless of the following challenges:
 
 * There may be one or more service instances available to handle a specific request.
 * Services might come and go, each time starting with a different IP address or port.
-* Service routes might change (updated or removed) as services are added or improved.
+* Service routes might change (updated or removed), as services are added or improved.
 * No changes to infrastructure would be required to address the above concerns.
 
 So how does this work?
@@ -41,11 +40,11 @@ hydraExpress.init(config, version, () => {
 
 The Hydra-Router then uses the resulting service registration information to later route messages to specific services.
 
-Services can be started on any machine on a network with or without the use of random IP ports. Because each service registers itself - it can be located by a hydra-router. This is that Dynamic Service Registry bit.
+Services can be started on any machine on a network with or without the use of random IP ports. Because each service registers itself - it can be located by a hydra-router. This is the Dynamic Service Registry bit.
 
 > But is it really a router? Yes! Hydra-Router uses [route-parser]() an AST-based tree parser for matching routes.
 
-When a message is sent to the Hydra-Router it checks whether the request matches a registered route. If so, the request message is routed to an active instance of the service which registered the route. When multiple service instances exists for a service, Hydra-Router will load-balance the request to spread the load among available services.
+When a message is sent to the Hydra-Router it checks whether the request matches a registered route. If so, the request message is routed to an active instance of the service which registered the route. When multiple service instances exist for a service, Hydra-Router will load-balance the requests to spread the load among available services.
 
 Let's see an illustration:
 
@@ -53,7 +52,7 @@ Let's see an illustration:
 
 In the diagram above an API request is being made to the offers service. The request arrives through an AWS Elastic Load Balancer and is directed to an instance of a HydraRouter. We can see the network topology on the left showing load-balanced hydra-routers and multiple instances of two services, the offers service and the suggestion service.
 
-On the right is a zoomed in view, where we see that the router matches the request against registered routes. It detects a match on `v1/offers/validate/:phone/:code` and uses that information to directed the request to an offers service.
+On the right is a zoomed in view, where we see that the router matches the request against registered routes. It detects a match on `v1/offers/validate/:phone/:code` and uses that information to direct the request to an offers service.
 
 > ☕ **The key takeaway here is that this happens automatically without the need to update configuration and infrastructure. This works using Hydra's built-in service discovery and routing functionality.**
 
@@ -138,7 +137,7 @@ Response:
 
 **Listing routes: /v1/router/list/routes**
 
-Used to display a list of registered routes.  Notice that the Hydra-Router (itself a service!) display's its own API.
+Used to display a list of registered routes.  Notice that the Hydra-Router, itself a service, display's its own API.
 
 ```javascript
 {
