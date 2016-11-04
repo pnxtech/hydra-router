@@ -1,7 +1,7 @@
 'use strict';
 
 const Promise = require('bluebird');
-const hydra = require('@flywheelsports/fwsp-hydra');
+const hydra = require('fwsp-hydra');
 const ServerResponse = require('fwsp-server-response');
 const serverResponse = new ServerResponse;
 const Utils = require('fwsp-jsutils');
