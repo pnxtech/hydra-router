@@ -377,8 +377,8 @@ class ServiceRouter {
       'to': 'client:/',
       'from': 'hydra-router:/'
     });
-
-    let msg = UMFMessage.createMessage(Utils.safeJSONParse(message));
+    let premsg = Utils.safeJSONParse(message);
+    let msg = (premsg) ? UMFMessage.createMessage(premsg) : null;
     if (!msg) {
       umf.body = {
         error: `Unable to parse: ${message}`
