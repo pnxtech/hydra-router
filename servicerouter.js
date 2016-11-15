@@ -128,7 +128,7 @@ class ServiceRouter {
         response.writeHead(ServerResponse.HTTP_OK, {
           'access-control-allow-origin': '*',
           'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'access-control-allow-headers': 'authorization, content-type, accept',
+          'access-control-allow-headers': 'accept, authorization, cache-control, content-type, x-requested-with',
           'access-control-max-age': 10,
           'Content-Type': 'application/json'
         });
