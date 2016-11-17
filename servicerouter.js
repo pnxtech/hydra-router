@@ -201,9 +201,7 @@ class ServiceRouter {
             }
             hydra.makeAPIRequest(message.toJSON())
               .then((data) => {
-                serverResponse.sendResponse(data.statusCode, response, {
-                  result: data.result
-                });
+                serverResponse.sendResponse(data.statusCode, response, data);
                 resolve();
               })
               .catch((err) => {
