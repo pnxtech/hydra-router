@@ -2,6 +2,7 @@
   "cluster": false,
   "processes": 0,
   "externalRoutes": {},
+  "risingStack": false,
   "hydra": {
     "serviceName": "hydra-router",
     "serviceDescription": "Service Router",

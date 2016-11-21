@@ -4,16 +4,6 @@
 */
 'use strict';
 
-const http = require('http');
-const cluster = require('cluster');
-const os = require('os');
-const hydra = require('fwsp-hydra');
-const Utils = require('fwsp-jsutils');
-const version = require('./package.json').version;
-const serviceRouter = require('./servicerouter');
-const url = require('url');
-const WebSocketServer = require('ws').Server;
-
 /**
 * Router route list.
 */
@@ -28,6 +18,18 @@ let routeList = [
 let config = require('fwsp-config');
 config.init('./config/config.json')
   .then(() => {
+    if (config.risingStack) {
+      require('@risingstack/trace');
+    }
+    const http = require('http');
+    const cluster = require('cluster');
+    const os = require('os');
+    const hydra = require('fwsp-hydra');
+    const Utils = require('fwsp-jsutils');
+    const version = require('./package.json').version;
+    const serviceRouter = require('./servicerouter');
+    const url = require('url');
+    const WebSocketServer = require('ws').Server;
     config.version = version;
     config.hydra.serviceVersion = version;
 
@@ -68,75 +70,75 @@ config.init('./config/config.json')
         initWorker();
       }
     }
+
+    /**
+    * @name initWorker
+    * @summary Initialize the core process functionality.
+    */
+    function initWorker() {
+      /**
+      * Initialize hydra for use by Service Router.
+      */
+      hydra.init(config.hydra)
+        .then(() => {
+          return hydra.registerService();
+        })
+        .then((serviceInfo) => {
+          let logEntry = `Starting hydra-router service ${serviceInfo.serviceName} on port ${serviceInfo.servicePort}`;
+          hydra.sendToHealthLog('info', logEntry);
+          console.log(logEntry);
+
+          hydra.on('log', (entry) => {
+            console.log('>>>> ', entry);
+          });
+
+          /**
+          * @summary Start HTTP server and add request handler callback.
+          * @param {object} request - Node HTTP request object
+          * @param {object} response - Node HTTP response object
+          */
+          let server = http.createServer((request, response) => {
+            serviceRouter.routeRequest(request, response);
+          });
+          server.listen(serviceInfo.servicePort);
+
+          /**
+          * Setup websocket message handler.
+          */
+          let wss = new WebSocketServer({ server: server });
+          wss.on('connection', (ws) => {
+            serviceRouter.markSocket(ws);
+
+            ws.on('message', (message) => {
+              serviceRouter.routeWSMessage(ws, message);
+            });
+
+            ws.on('close', () => {
+              serviceRouter.wsDisconnect(ws);
+            });
+          });
+
+          /**
+          * Register routes.
+          */
+          return hydra.registerRoutes(routeList);
+        })
+        .then(() => {
+          /**
+          * Retrieve routes for all registered services.
+          */
+          return hydra.getAllServiceRoutes();
+        })
+        .then((routesObj) => {
+          /**
+          * Initialize service router using routes object.
+          */
+          routesObj = Object.assign(routesObj, config.externalRoutes);
+          serviceRouter.init(config, routesObj);
+          return null; // to silence promise warning: http://goo.gl/rRqMUw
+        })
+        .catch((err) => {
+          console.log('err', err);
+        });
+    }
   });
-
-/**
-* @name initWorker
-* @summary Initialize the core process functionality.
-*/
-function initWorker() {
-  /**
-  * Initialize hydra for use by Service Router.
-  */
-  hydra.init(config.hydra)
-    .then(() => {
-      return hydra.registerService();
-    })
-    .then((serviceInfo) => {
-      let logEntry = `Starting hydra-router service ${serviceInfo.serviceName} on port ${serviceInfo.servicePort}`;
-      hydra.sendToHealthLog('info', logEntry);
-      console.log(logEntry);
-
-      hydra.on('log', (entry) => {
-        console.log('>>>> ', entry);
-      });
-
-      /**
-      * @summary Start HTTP server and add request handler callback.
-      * @param {object} request - Node HTTP request object
-      * @param {object} response - Node HTTP response object
-      */
-      let server = http.createServer((request, response) => {
-        serviceRouter.routeRequest(request, response);
-      });
-      server.listen(serviceInfo.servicePort);
-
-      /**
-      * Setup websocket message handler.
-      */
-      let wss = new WebSocketServer({ server: server });
-      wss.on('connection', (ws) => {
-        serviceRouter.markSocket(ws);
-
-        ws.on('message', (message) => {
-          serviceRouter.routeWSMessage(ws, message);
-        });
-
-        ws.on('close', () => {
-          serviceRouter.wsDisconnect(ws);
-        });
-      });
-
-      /**
-      * Register routes.
-      */
-      return hydra.registerRoutes(routeList);
-    })
-    .then(() => {
-      /**
-      * Retrieve routes for all registered services.
-      */
-      return hydra.getAllServiceRoutes();
-    })
-    .then((routesObj) => {
-      /**
-      * Initialize service router using routes object.
-      */
-      routesObj = Object.assign(routesObj, config.externalRoutes);
-      serviceRouter.init(config, routesObj);
-      return null; // to silence promise warning: http://goo.gl/rRqMUw
-    })
-    .catch((err) => {
-      console.log('err', err);
-    });
-}
