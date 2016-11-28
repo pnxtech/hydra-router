@@ -4,6 +4,8 @@ Hydra Router is a service-aware router which can direct HTTP and websocket messa
 
 ## Introduction
 
+[![Join the chat at https://gitter.im/flywheelsports/fwsp-hydra-router](https://badges.gitter.im/flywheelsports/fwsp-hydra-router.svg)](https://gitter.im/flywheelsports/fwsp-hydra-router?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Using hydra router external clients can connect to services without knowing their IP or port information. Hydra router takes care of service discovery and routing.
 
 Additionally, hydra router can route to a website being hosted by a service.  If the router is accessed using a service name as the first url path segment and the request is an HTTP GET call, then the request is routed to an available service instance.
