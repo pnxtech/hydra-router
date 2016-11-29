@@ -416,7 +416,7 @@ class ServiceRouter {
               this._sendWSMessage(ws, umf.toJSON());
               return;
             }
-            let toRoute = UMFMessage.parseRoute(msg.to);
+            toRoute = UMFMessage.parseRoute(msg.to);
             let newMsg = UMFMessage.createMessage({
               to: `${results[0].instanceID}@${results[0].serviceName}:${toRoute.apiRoute}`,
               via: `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`,
