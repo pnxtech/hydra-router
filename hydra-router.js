@@ -33,6 +33,9 @@ config.init('./config/config.json')
     config.version = version;
     config.hydra.serviceVersion = version;
 
+    const Logger = require('fwsp-logger').Logger;
+    let appLogger;
+
     /**
     * Handling for process invocation as a process master or child process.
     */
@@ -88,8 +91,12 @@ config.init('./config/config.json')
           hydra.sendToHealthLog('info', logEntry);
           console.log(logEntry);
 
+          logger = new Logger(config.logger);
+          appLogger = logger.getLogger();
+          
           hydra.on('log', (entry) => {
             console.log('>>>> ', entry);
+            appLogger.info(entry);
           });
 
           /**
