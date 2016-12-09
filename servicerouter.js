@@ -207,8 +207,7 @@ class ServiceRouter {
                 resolve();
               })
               .catch((err) => {
-                this.appLogger.fatal(err.message);
-                this.appLogger.fatal(err.stack);
+                this.appLogger.fatal(err);
                 let reason;
                 if (err.result && err.result.reason) {
                   reason = err.result.reason;
@@ -311,7 +310,7 @@ class ServiceRouter {
                   reason: msg
                 }
               });
-              this.appLogger.fatal(msg);
+              this.appLogger.fatal(err);
               resolve();
             });
         }
