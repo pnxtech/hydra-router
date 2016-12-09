@@ -91,12 +91,30 @@ config.init('./config/config.json')
           hydra.sendToHealthLog('info', logEntry);
           console.log(logEntry);
 
-          logger = new Logger(config.logger);
+          let logger = new Logger({
+            name: config.hydra.serviceName,
+            toConsole: true
+          }, config.logger.elasticsearch);
           appLogger = logger.getLogger();
-          
+
+          process.on('uncaughtException', (err) => {
+            let stack = err.stack;
+            delete err.__cached_trace__;
+            delete err.__previous__;
+            delete err.domain;
+
+            appLogger.fatal({
+              stack
+            });
+            process.exit(1);
+          });
+
+          appLogger.info({
+            msg: logEntry
+          });
+
           hydra.on('log', (entry) => {
-            console.log('>>>> ', entry);
-            appLogger.info(entry);
+            appLogger[entry.type](entry);
           });
 
           /**
@@ -141,11 +159,13 @@ config.init('./config/config.json')
           * Initialize service router using routes object.
           */
           routesObj = Object.assign(routesObj, config.externalRoutes);
-          serviceRouter.init(config, routesObj);
+          serviceRouter.init(config, routesObj, appLogger);
           return null; // to silence promise warning: http://goo.gl/rRqMUw
         })
         .catch((err) => {
-          console.log('err', err);
+          appLogger.fatal({
+            stack: err.stack
+          });
         });
     }
   });
