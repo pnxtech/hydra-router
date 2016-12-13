@@ -22,6 +22,7 @@ class ServiceRouter {
   constructor() {
     this.routerTable = null;
     this.serviceNames = {};
+    this.appLogger = null;
     serverResponse.enableCORS(true);
     this._handleIncomingChannelMessage = this._handleIncomingChannelMessage.bind(this);
   }
@@ -32,7 +33,8 @@ class ServiceRouter {
   * @param {object} config - configuration
   * @param {object} routesObj - routes object
   */
-  init(config, routesObj) {
+  init(config, routesObj, appLogger) {
+    this.appLogger = appLogger;
     Object.keys(routesObj).forEach((serviceName) => {
       let newRouteItems = [];
       let routes = routesObj[serviceName];
@@ -83,8 +85,7 @@ class ServiceRouter {
           delete msg.via;
           this._sendWSMessage(ws, msg);
         } else {
-          // websocket not found - it was likely closed
-          //TODO(CJ): figure out what to do with message replies for closed sockets
+          this.appLogger.error(`${message.from}: websocket not found - it was likely closed`);
         }
       }
     }
@@ -110,6 +111,7 @@ class ServiceRouter {
         }
       }
     }
+    this.appLogger.info(`${urlData.path} was not matched to a route`);
     return null;
   }
 
@@ -205,6 +207,7 @@ class ServiceRouter {
                 resolve();
               })
               .catch((err) => {
+                this.appLogger.fatal(err);
                 let reason;
                 if (err.result && err.result.reason) {
                   reason = err.result.reason;
@@ -251,11 +254,13 @@ class ServiceRouter {
                     }
                   }).pipe(response);
                 } else {
+                  let msg = `Unavailable ${matchResult.serviceName} instances`;
                   serverResponse.sendResponse(ServerResponse.HTTP_SERVICE_UNAVAILABLE, response, {
                     result: {
-                      reason: `Unavailable ${matchResult.serviceName} instances`
+                      reason: msg
                     }
                   });
+                  this.appLogger.fatal(msg);
                 }
               });
             return;
@@ -299,12 +304,13 @@ class ServiceRouter {
               resolve();
             })
             .catch((err) => {
-              console.log('err', err);
+              let msg = err.result.reason;
               serverResponse.sendResponse(err.statusCode, response, {
                 result: {
-                  reason: err.result.reason
+                  reason: msg
                 }
               });
+              this.appLogger.fatal(err);
               resolve();
             });
         }
@@ -349,6 +355,7 @@ class ServiceRouter {
           result: reason
         };
         this._sendWSMessage(ws, replyMessage.toJSON());
+        this.appLogger.fatal(err);
       });
   }
 
@@ -592,7 +599,6 @@ class ServiceRouter {
       try {
         umf = UMFMessage.createMessage(Utils.safeJSONParse(umf));
       } catch (err) {
-        console.log(err);
         serverResponse.sendInvalidRequest(response);
         return;
       }

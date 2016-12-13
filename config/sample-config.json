@@ -3,6 +3,16 @@
   "processes": 0,
   "externalRoutes": {},
   "risingStack": false,
+  "logger": {
+    "toConsole": false,
+    "noFile": true,
+    "logRequests": true,
+    "redact": ["password"],
+    "elasticsearch": {
+      "host": "localhost",
+      "port": 9200
+    }
+  },
   "hydra": {
     "serviceName": "hydra-router",
     "serviceDescription": "Service Router",
