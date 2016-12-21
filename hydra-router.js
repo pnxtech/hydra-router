@@ -15,6 +15,7 @@ let routeList = [
   '[post]/v1/router/message'
 ];
 
+let appLogger;
 let config = require('fwsp-config');
 config.init('./config/config.json')
   .then(() => {
@@ -33,8 +34,9 @@ config.init('./config/config.json')
     config.version = version;
     config.hydra.serviceVersion = version;
 
-    const Logger = require('fwsp-logger').Logger;
-    let appLogger;
+    const HydraLogger = require('fwsp-logger').HydraLogger;
+    let hydraLogger = new HydraLogger();
+    hydra.use(hydraLogger);
 
     /**
     * Handling for process invocation as a process master or child process.
@@ -91,11 +93,7 @@ config.init('./config/config.json')
           hydra.sendToHealthLog('info', logEntry);
           console.log(logEntry);
 
-          let logger = new Logger({
-            name: config.hydra.serviceName,
-            toConsole: true
-          }, config.logger.elasticsearch);
-          appLogger = logger.getLogger();
+          appLogger = hydraLogger.getLogger();
 
           process.on('uncaughtException', (err) => {
             let stack = err.stack;
