@@ -3,22 +3,23 @@
   "processes": 0,
   "externalRoutes": {},
   "risingStack": false,
-  "logger": {
-    "toConsole": false,
-    "noFile": true,
-    "logRequests": true,
-    "redact": ["password"],
-    "elasticsearch": {
-      "host": "localhost",
-      "port": 9200
-    }
-  },
   "hydra": {
     "serviceName": "hydra-router",
     "serviceDescription": "Service Router",
     "serviceIP": "",
     "servicePort": 5353,
     "serviceType": "router",
+    "plugins": {
+      "logger": {
+        "logRequests": true,
+        "redact": ["password"],
+        "elasticsearch": {
+          "host": "localhost",
+          "port": 9200,
+          "index": "hydra"
+        }
+      }
+    },
     "redis": {
       "url": "redis",
       "port": 6379,
