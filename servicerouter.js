@@ -406,6 +406,17 @@ class ServiceRouter {
       this.wsRouteThroughHttp(ws, msg.toJSON());
     } else {
       let toRoute = UMFMessage.parseRoute(msg.to);
+      if (toRoute.apiRoute === '/_ping') {
+        let newMsg = UMFMessage.createMessage({
+          to: msg.from,
+          rmid: msg.mid,
+          body: {
+            typ: 'pong'
+          }
+        });
+        this._sendWSMessage(ws, newMsg.toJSON());
+        return;
+      }
       if (toRoute.instance !== '') {
         let viaRoute = `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`;
         let newMessage = Object.assign(msg.toJSON(), {
