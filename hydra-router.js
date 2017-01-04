@@ -89,7 +89,7 @@ config.init('./config/config.json')
           return hydra.registerService();
         })
         .then((serviceInfo) => {
-          let logEntry = `Starting hydra-router service ${serviceInfo.serviceName} on port ${serviceInfo.servicePort}`;
+          let logEntry = `Starting hydra-router service ${serviceInfo.serviceName} on ${serviceInfo.serviceIP}:${serviceInfo.servicePort}`;
           hydra.sendToHealthLog('info', logEntry);
           console.log(logEntry);
 
