@@ -1,6 +1,6 @@
 {
   "name": "fwsp-hydra-router",
-  "version": "0.13.1",
+  "version": "0.13.2",
   "description": "A service which routes requests to hydra-based microservices",
   "author": {
     "name": "Carlos Justiniano",
@@ -20,9 +20,9 @@
     "@risingstack/trace": "3.0.2",
     "bluebird": "3.4.7",
     "fwsp-config": "1.1.0",
-    "fwsp-hydra": "0.13.0",
+    "fwsp-hydra": "0.13.2",
     "fwsp-jsutils": "1.0.8",
-    "fwsp-logger": "0.1.0",
+    "fwsp-logger": "0.1.1",
     "fwsp-server-response": "2.2.3",
     "fwsp-umf-message": "0.4.3",
     "request": "2.79.0",
