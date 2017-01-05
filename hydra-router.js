@@ -112,6 +112,7 @@ config.init('./config/config.json')
           });
 
           hydra.on('log', (entry) => {
+            console.log('logentry', entry);
             appLogger[entry.type](entry);
           });
 
@@ -161,9 +162,8 @@ config.init('./config/config.json')
           return null; // to silence promise warning: http://goo.gl/rRqMUw
         })
         .catch((err) => {
-          appLogger.fatal({
-            stack: err.stack
-          });
+          console.log(err);
+          process.exit(-1);
         });
     }
   });
