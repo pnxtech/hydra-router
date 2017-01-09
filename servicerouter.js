@@ -436,6 +436,7 @@ class ServiceRouter {
             }
             toRoute = UMFMessage.parseRoute(msg.to);
             let newMsg = UMFMessage.createMessage({
+              mid: msg.mid,
               to: `${results[0].instanceID}@${results[0].serviceName}:${toRoute.apiRoute}`,
               via: `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`,
               body: msg.body,
