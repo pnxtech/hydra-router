@@ -1,7 +1,7 @@
 'use strict';
 
 const Promise = require('bluebird');
-const hydra = require('@flywheelsports/fwsp-hydra');
+const hydra = require('fwsp-hydra');
 const Utils = require('fwsp-jsutils');
 const UMFMessage = require('fwsp-umf-message');
 const WebSocket = require('ws');
@@ -41,7 +41,7 @@ class ApiCommand {
     hydra.init(json.hydra)
       .then(() => {
         /**
-        * obtain presence information for the bmss service.
+        * obtain presence information for the hydra-router service.
         */
         hydra.getServicePresence('hydra-router')
           .then((info) => {

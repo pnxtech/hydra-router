@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "fwsp-config": "1.0.3",
-    "@flywheelsports/fwsp-hydra": "0.10.0",
+    "fwsp-hydra": "0.13.2",
     "fwsp-jsutils": "1.0.8",
     "fwsp-server-response": "2.2.3",
     "fwsp-umf-message": "0.3.1",
