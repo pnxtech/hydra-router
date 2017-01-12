@@ -16,6 +16,8 @@ let routeList = [
 ];
 
 let appLogger;
+const Queuer = require('fwsp-queuer');
+
 let config = require('fwsp-config');
 config.init('./config/config.json')
   .then(() => {
@@ -131,7 +133,7 @@ config.init('./config/config.json')
           */
           let wss = new WebSocketServer({ server: server });
           wss.on('connection', (ws) => {
-            serviceRouter.markSocket(ws);
+            serviceRouter.sendConnectMessage(ws);
 
             ws.on('message', (message) => {
               serviceRouter.routeWSMessage(ws, message);
