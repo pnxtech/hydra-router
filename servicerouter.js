@@ -11,6 +11,7 @@ const querystring = require('querystring');
 const Route = require('route-parser');
 const version = require('./package.json').version;
 const serverRequest = require('request');
+const Queuer = require('fwsp-queuer');
 
 let wsClients = {};
 
@@ -51,6 +52,10 @@ class ServiceRouter {
       routesObj[serviceName] = newRouteItems;
     });
     hydra.on('message', this._handleIncomingChannelMessage);
+
+    this.queuer = new Queuer();
+    this.queuer.open(config.queuer);
+
     this.routerTable = routesObj;
     this._refreshRoutes();
   }
@@ -85,7 +90,8 @@ class ServiceRouter {
           delete msg.via;
           this._sendWSMessage(ws, msg);
         } else {
-          this.appLogger.error(`${message.from}: websocket not found - it was likely closed`);
+          // websocket not found - it was likely closed, so queue the message for later retrieval
+          this.queuer.enqueue(`hydra-router:message:queue:${viaRoute.subID}`, msg);
         }
       }
     }
@@ -181,7 +187,7 @@ class ServiceRouter {
       }
 
       if (matchResult) {
-        if (matchResult.serviceName === 'hydra-router') {
+        if (matchResult.serviceName === hydra.getServiceName()) {
           this._handleRouterRequest(matchResult, request, response);
           resolve();
           return;
@@ -195,7 +201,7 @@ class ServiceRouter {
           request.on('end', () => {
             let message = UMFMessage.createMessage({
               to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
-              from: 'hydra-router:/',
+              from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
               body: Utils.safeJSONParse(body)
             });
             if (request.headers['authorization']) {
@@ -266,10 +272,10 @@ class ServiceRouter {
             return;
           }
 
-          // this is a JSON request, package in a UMF message.
+          // this is a JSON request, package should contain a UMF message.
           let message = {
             to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
-            from: 'hydra-router:/',
+            from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
             body: {}
           };
           if (request.headers['authorization']) {
@@ -360,15 +366,25 @@ class ServiceRouter {
   }
 
   /**
-  * @name markSocket
-  * @summary Tags a websocket with an ID
+  * @name sendConnectMessage
+  * @summary Send a message on socket connect
   * @param {object} ws - websocket
+  * @param {number} id - connection id if any
   */
-  markSocket(ws) {
-    ws.id = Utils.shortID();
+  sendConnectMessage(ws, id) {
+    ws.id = id || Utils.shortID();
     if (!wsClients[ws.id]) {
       wsClients[ws.id] = ws;
     }
+    let welcomeMessage = UMFMessage.createMessage({
+      to: `${ws.id}@client:/`,
+      from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
+      type: 'connection',
+      body: {
+        id: ws.id
+      }
+    });
+    this._sendWSMessage(ws, welcomeMessage.toJSON());
   }
 
   /**
@@ -379,8 +395,8 @@ class ServiceRouter {
   */
   routeWSMessage(ws, message) {
     let umf = UMFMessage.createMessage({
-      'to': 'client:/',
-      'from': 'hydra-router:/'
+      'to': `client-${ws.id}:/`,
+      'from': `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`
     });
     let premsg = Utils.safeJSONParse(message);
     let msg = (premsg) ? UMFMessage.createMessage(premsg) : null;
@@ -405,18 +421,46 @@ class ServiceRouter {
       // i.e. [get] [post] etc...
       this.wsRouteThroughHttp(ws, msg.toJSON());
     } else {
-      let toRoute = UMFMessage.parseRoute(msg.to);
-      if (toRoute.apiRoute === '/_ping') {
-        let newMsg = UMFMessage.createMessage({
-          to: msg.from,
-          rmid: msg.mid,
-          body: {
-            typ: 'pong'
+      switch (msg.type) {
+        case 'ping':
+          let newMsg = UMFMessage.createMessage({
+            to: msg.from,
+            rmid: msg.mid,
+            body: {
+              typ: 'pong'
+            }
+          });
+          this._sendWSMessage(ws, newMsg.toJSON());
+          return;
+        case 'reconnect':
+          if (!msg.body.id) {
+            let umf = UMFMessage.createMessage({
+              to: msg.from,
+              from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
+              body: {
+                error: 'reconnect message missing reconnect id'
+              }
+            });
+            this._sendWSMessage(ws, umf.toJSON());
+          } else {
+            this.sendConnectMessage(ws, msg.body.id);
+            let iid = setInterval(() => {
+              let queueName = `hydra-router:message:queue:${msg.body.id}`;
+              this.queuer.dequeue(queueName)
+                .then((obj) => {
+                  if (!obj) {
+                    clearInterval(iid);
+                  } else {
+                    this._sendWSMessage(ws, UMFMessage.createMessage(obj).toJSON());
+                    this.queuer.complete(queueName, obj);
+                  }
+                });
+            }, 0);
           }
-        });
-        this._sendWSMessage(ws, newMsg.toJSON());
-        return;
+          return;
       }
+
+      let toRoute = UMFMessage.parseRoute(msg.to);
       if (toRoute.instance !== '') {
         let viaRoute = `${hydra.getInstanceID()}-${ws.id}@${hydra.getServiceName()}:/`;
         let newMessage = Object.assign(msg.toJSON(), {
@@ -617,7 +661,7 @@ class ServiceRouter {
 
       let forwardMessage = UMFMessage.createMessage({
         to: umf.forward,
-        from: 'hydra-router:/',
+        from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
         body: umf.body
       });
       hydra.makeAPIRequest(forwardMessage.toJSON())
