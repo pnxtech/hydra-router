@@ -202,7 +202,7 @@ class ServiceRouter {
             let message = UMFMessage.createMessage({
               to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
               from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
-              body: Utils.safeJSONParse(body)
+              body: Utils.safeJSONParse(body) || {}
             });
             if (request.headers['authorization']) {
               message.authorization = request.headers['authorization'];
