@@ -1,4 +1,4 @@
-FROM flywheelsports/servicebase:0.0.2
+FROM node:6.9.4-alpine
 MAINTAINER Carlos Justiniano cjus34@gmail.com
 EXPOSE 80 
 RUN mkdir -p /usr/src/app
