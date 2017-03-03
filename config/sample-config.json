@@ -16,7 +16,7 @@
         "elasticsearch": {
           "host": "localhost",
           "port": 9200,
-          "index": "hydra"
+          "index": "hydra-router"
         }
       }
     },
@@ -30,5 +30,5 @@
     "url": "redis",
     "port": 6379,
     "db": 3
-  }  
+  }
 }

@@ -13,6 +13,10 @@ const version = require('./package.json').version;
 const serverRequest = require('request');
 const Queuer = require('fwsp-queuer');
 
+const INFO = 'info';
+const ERROR = 'error';
+const FATAL = 'fatal';
+
 let wsClients = {};
 
 /**
@@ -40,6 +44,7 @@ class ServiceRouter {
       let newRouteItems = [];
       let routes = routesObj[serviceName];
       routes.forEach((routePattern) => {
+        this.log(INFO, `${serviceName} adding ${routePattern}`);
         let idx = routePattern.indexOf(']');
         if (idx > -1) {
           routePattern = routePattern.substring(idx + 1);
@@ -61,6 +66,17 @@ class ServiceRouter {
   }
 
   /**
+  * @name log
+  * @summary log a message
+  * @param {string} type - type (info, error, fatal)
+  * @param {string} message - message to log
+  * @return {undefined}
+  */
+  log(type, message) {
+    this.appLogger[type](message);
+  }
+
+  /**
   * @name _sendWSMessage
   * @summary send websocket message in short UMF format
   * @param {object} ws - websocket
@@ -77,6 +93,8 @@ class ServiceRouter {
   * @param {object} msg - UMF formated message
   */
   _handleIncomingChannelMessage(msg) {
+    this.log(INFO, `Incoming channel message: ${Utils.safeJSONStringify(msg)}`);
+
     let message = UMFMessage.createMessage(msg);
     if (message.body.action === 'refresh') {
       this._refreshRoutes(message.body.serviceName);
@@ -92,6 +110,7 @@ class ServiceRouter {
         } else {
           // websocket not found - it was likely closed, so queue the message for later retrieval
           this.queuer.enqueue(`hydra-router:message:queue:${viaRoute.subID}`, msg);
+          this.log(ERROR, `Websocket ${viaRoute.subID} not found, queuing message`);
         }
       }
     }
@@ -117,7 +136,7 @@ class ServiceRouter {
         }
       }
     }
-    this.appLogger.info(`${urlData.path} was not matched to a route`);
+    this.log(INFO, `${urlData.path} was not matched to a route`);
     return null;
   }
 
@@ -151,10 +170,19 @@ class ServiceRouter {
           'Location': requestUrl.substring(0, requestUrl.length - 1)
         });
         response.end();
+        let who = request.headers['referer'] || 'unknown';
+        this.log(INFO, `Performing 302 redirect by ${who}`);
         return;
       }
 
-      let urlData = url.parse(`http://${request.headers['host']}${requestUrl}`);
+      let urlPath = `http://${request.headers['host']}${requestUrl}`;
+      let urlData = url.parse(urlPath);
+
+      if (request.headers['referer']) {
+        this.log(INFO, `Access ${urlPath} via ${request.headers['referer']}`);
+      } else {
+        this.log(INFO, `Request for ${urlPath}`);
+      }
 
       let matchResult = this._matchRoute(urlData);
       if (!matchResult) {
@@ -213,7 +241,7 @@ class ServiceRouter {
                 resolve();
               })
               .catch((err) => {
-                this.appLogger.fatal(err);
+                this.log(FATAL, err);
                 let reason;
                 if (err.result && err.result.reason) {
                   reason = err.result.reason;
@@ -256,6 +284,7 @@ class ServiceRouter {
                     if (error) {
                       if (error.code === 'ECONNREFUSED') {
                         // caller is no longer available.
+                        this.log(FATAL, `ECONNREFUSED at ${url} - no longer available?`);
                       }
                     }
                   }).pipe(response);
@@ -266,7 +295,7 @@ class ServiceRouter {
                       reason: msg
                     }
                   });
-                  this.appLogger.fatal(msg);
+                  this.log(FATAL, msg);
                 }
               });
             return;
@@ -282,6 +311,7 @@ class ServiceRouter {
             message.authorization = request.headers['authorization'];
           }
           let msg = UMFMessage.createMessage(message).toJSON();
+          this.log(INFO, `Calling remote service ${Utils.safeJSONStringify(msg)}`);
           hydra.makeAPIRequest(msg)
             .then((data) => {
               if (data.headers) {
@@ -292,19 +322,30 @@ class ServiceRouter {
                 response.writeHead(ServerResponse.HTTP_OK, headers);
                 response.write(data.body);
                 response.end();
+
+                if (data.body) {
+                  this.log(INFO, `Response from service (${msg.to}): ${Utils.safeJSONStringify(data.body)}`);
+                }
               } else {
                 if (data.statusCode) {
                   serverResponse.sendResponse(data.statusCode, response, {
                     result: data.result
                   });
+                  if (data.result) {
+                    this.log(INFO, `Response from service (${msg.to}): status(${data.statusCode}): ${Utils.safeJSONStringify(data.result)}`);
+                  }
                 } else if (data.code) {
                   serverResponse.sendResponse(data.code, response, {
                     result: {}
                   });
+                  if (data.code) {
+                    this.log(INFO, `Response from service (${msg.to}): status(${data.statusCode}): {}`);
+                  }
                 } else {
                   serverResponse.sendResponse(serverResponse.HTTP_NOT_FOUND, response, {
                     result: {}
                   });
+                  this.log(ERROR, `Response from service (${msg.to}): status(HTTP_NOT_FOUND): {}`);
                 }
               }
               resolve();
@@ -316,13 +357,14 @@ class ServiceRouter {
                   reason: msg
                 }
               });
-              this.appLogger.fatal(err);
+              this.log(FATAL, err);
               resolve();
             });
         }
       } else {
         serverResponse.sendNotFound(response);
         resolve();
+        this.log(FATAL, `No service match for ${Utils.safeJSONStringify(matchResult)}`);
       }
     });
   }
@@ -361,7 +403,7 @@ class ServiceRouter {
           result: reason
         };
         this._sendWSMessage(ws, replyMessage.toJSON());
-        this.appLogger.fatal(err);
+        this.log(FATAL, err);
       });
   }
 
@@ -530,6 +572,7 @@ class ServiceRouter {
       this._handleMessage(request, response);
     } else {
       serverResponse.sendNotFound(response);
+      this.log(INFO, `${matchResult.pattern} was not matched to a route`);
     }
   }
 
