@@ -3,6 +3,7 @@
   "processes": 0,
   "externalRoutes": {},
   "risingStack": false,
+  "debugLogging": false,  
   "hydra": {
     "serviceName": "hydra-router",
     "serviceDescription": "Service Router",

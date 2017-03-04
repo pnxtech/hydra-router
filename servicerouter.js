@@ -25,6 +25,7 @@ let wsClients = {};
 */
 class ServiceRouter {
   constructor() {
+    this.config = null;
     this.routerTable = null;
     this.serviceNames = {};
     this.appLogger = null;
@@ -39,6 +40,7 @@ class ServiceRouter {
   * @param {object} routesObj - routes object
   */
   init(config, routesObj, appLogger) {
+    this.config = config;
     this.appLogger = appLogger;
     Object.keys(routesObj).forEach((serviceName) => {
       let newRouteItems = [];
@@ -73,7 +75,9 @@ class ServiceRouter {
   * @return {undefined}
   */
   log(type, message) {
-    this.appLogger[type](message);
+    if (this.config.debugLogging) {
+      this.appLogger[type](message);
+    }
   }
 
   /**
@@ -364,7 +368,7 @@ class ServiceRouter {
       } else {
         serverResponse.sendNotFound(response);
         resolve();
-        this.log(FATAL, `No service match for ${Utils.safeJSONStringify(matchResult)}`);
+        this.log(FATAL, `No service match for ${request.url}`);
       }
     });
   }
@@ -426,6 +430,7 @@ class ServiceRouter {
         id: ws.id
       }
     });
+    this.log(INFO, `Sending connection message to new websocket client ${Utils.safeJSONStringify(welcomeMessage)}`);
     this._sendWSMessage(ws, welcomeMessage.toJSON());
   }
 
@@ -518,6 +523,7 @@ class ServiceRouter {
                 error: `No ${toRoute.serviceName} instances available`
               };
               this._sendWSMessage(ws, umf.toJSON());
+              this.log(ERROR, `Unable to route WS message because an instance of ${toRoute.serviceName} isn't available`);
               return;
             }
             toRoute = UMFMessage.parseRoute(msg.to);
@@ -529,6 +535,7 @@ class ServiceRouter {
               from: msg.from
             });
             hydra.sendMessage(newMsg.toJSON());
+            this.log(INFO, `Routed WS message ${Utils.safeJSONStringify(newMsg.toJSON())}`);
           });
       }
     }

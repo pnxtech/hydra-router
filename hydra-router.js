@@ -95,9 +95,8 @@ config.init('./config/config.json')
           hydra.sendToHealthLog('info', logEntry);
 
           appLogger = hydraLogger.getLogger();
-
           appLogger.info({
-            message: logEntry
+            msg: logEntry
           });
 
           hydra.on('log', (entry) => {
