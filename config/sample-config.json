@@ -3,6 +3,7 @@
   "processes": 0,
   "externalRoutes": {},
   "risingStack": false,
+  "debugLogging": false,  
   "hydra": {
     "serviceName": "hydra-router",
     "serviceDescription": "Service Router",
@@ -16,7 +17,7 @@
         "elasticsearch": {
           "host": "localhost",
           "port": 9200,
-          "index": "hydra"
+          "index": "hydra-router"
         }
       }
     },
@@ -30,5 +31,5 @@
     "url": "redis",
     "port": 6379,
     "db": 3
-  }  
+  }
 }

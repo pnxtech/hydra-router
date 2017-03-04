@@ -1,6 +1,6 @@
 {
   "name": "fwsp-hydra-router",
-  "version": "0.14.5",
+  "version": "0.14.6",
   "description": "A service which routes requests to hydra-based microservices",
   "author": {
     "name": "Carlos Justiniano",
@@ -9,7 +9,7 @@
   "private": true,
   "scripts": {
     "start": "node hydra-router.js",
-    "debug": "node --inspect hydra-router.js",
+    "debug": "node --inspect --debug-brk hydra-router.js",
     "test": "mocha specs --reporter spec"
   },
   "engines": {
@@ -19,8 +19,8 @@
   "dependencies": {
     "@risingstack/trace": "3.2.0",
     "bluebird": "3.4.7",
-    "fwsp-config": "1.1.0",
-    "fwsp-hydra": "0.14.4",
+    "fwsp-config": "1.1.1",
+    "fwsp-hydra": "0.14.5",
     "fwsp-jsutils": "1.0.8",
     "fwsp-logger": "0.1.2",
     "fwsp-queuer": "0.0.1",

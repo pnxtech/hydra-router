@@ -93,9 +93,16 @@ config.init('./config/config.json')
         .then((serviceInfo) => {
           let logEntry = `Starting hydra-router service ${serviceInfo.serviceName} on ${serviceInfo.serviceIP}:${serviceInfo.servicePort}`;
           hydra.sendToHealthLog('info', logEntry);
-          console.log(logEntry);
 
           appLogger = hydraLogger.getLogger();
+          appLogger.info({
+            msg: logEntry
+          });
+
+          hydra.on('log', (entry) => {
+            console.log('logentry', entry);
+            appLogger[entry.type](entry);
+          });
 
           process.on('uncaughtException', (err) => {
             let stack = err.stack;
@@ -107,15 +114,6 @@ config.init('./config/config.json')
               stack
             });
             process.exit(1);
-          });
-
-          appLogger.info({
-            msg: logEntry
-          });
-
-          hydra.on('log', (entry) => {
-            console.log('logentry', entry);
-            appLogger[entry.type](entry);
           });
 
           /**
