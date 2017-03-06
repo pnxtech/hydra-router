@@ -169,6 +169,18 @@ class ServiceRouter {
         return;
       }
 
+      if (this.config.debugLogging) {
+        this.log(INFO, {
+          url: request.url,
+          method: request.method,
+          originalUrl: request.originalUrl,
+          callerIP: request.headers['x-forwarded-for'] || request.connection.remoteAddress,
+          body: (request.method === 'POST') ? request.body : {},
+          host: request.headers['host'],
+          userAgent: request.headers['user-agent']
+        });
+      }
+
       let requestUrl = request.url;
 
       if (requestUrl[requestUrl.length-1] === '/') {
@@ -445,6 +457,10 @@ class ServiceRouter {
   * @param {string} message - UMF message in string format
   */
   routeWSMessage(ws, message) {
+    if (this.config.debugLogging) {
+      this.log(INFO, `Incoming WS message: ${Utils.safeJSONStringify(message)}`);
+    }
+
     let umf = UMFMessage.createMessage({
       'to': `client-${ws.id}:/`,
       'from': `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`
