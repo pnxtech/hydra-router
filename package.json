@@ -1,6 +1,6 @@
 {
   "name": "fwsp-hydra-router",
-  "version": "0.14.9",
+  "version": "0.14.10",
   "description": "A service which routes requests to hydra-based microservices",
   "author": {
     "name": "Carlos Justiniano",
@@ -17,23 +17,23 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@risingstack/trace": "3.2.0",
-    "bluebird": "3.4.7",
+    "@risingstack/trace": "3.5.1",
+    "bluebird": "3.5.0",
     "fwsp-config": "1.1.1",
-    "fwsp-hydra": "0.14.6",
+    "fwsp-hydra": "0.14.7",
     "fwsp-jsutils": "1.0.9",
     "fwsp-logger": "0.1.2",
     "fwsp-queuer": "0.0.1",
     "fwsp-server-response": "2.2.3",
     "fwsp-umf-message": "0.4.3",
-    "request": "2.79.0",
+    "request": "2.80.0",
     "route-parser": "0.0.5",
     "uws": "0.13.0"
   },
   "devDependencies": {
     "chai": "3.5.0",
-    "eslint": "3.15.0",
+    "eslint": "3.17.1",
     "mocha": "3.2.0",
-    "superagent": "3.4.1"
+    "superagent": "3.5.0"
   }
 }
