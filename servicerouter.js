@@ -75,7 +75,9 @@ class ServiceRouter {
   * @return {undefined}
   */
   log(type, message) {
-    if (this.config.debugLogging) {
+    if (type === ERROR || type === FATAL) {
+      this.appLogger[type](message);
+    } else if (this.config.debugLogging) {
       this.appLogger[type](message);
     }
   }
@@ -241,6 +243,7 @@ class ServiceRouter {
             }
             hydra.makeAPIRequest(message.toJSON())
               .then((data) => {
+                this.log(INFO, `${matchResult.serviceName} responded with ${Utils.safeJSONStringify(data)}`);
                 serverResponse.sendResponse(data.statusCode, response, data);
                 resolve();
               })
@@ -355,20 +358,20 @@ class ServiceRouter {
               resolve();
             })
             .catch((err) => {
+              this.log(FATAL, err);
               let msg = err.result.reason;
               serverResponse.sendResponse(err.statusCode, response, {
                 result: {
                   reason: msg
                 }
               });
-              this.log(FATAL, err);
               resolve();
             });
         }
       } else {
+        this.log(ERROR, `No service match for ${request.url}`);
         serverResponse.sendNotFound(response);
         resolve();
-        this.log(FATAL, `No service match for ${request.url}`);
       }
     });
   }
@@ -394,8 +397,10 @@ class ServiceRouter {
           result: data.result
         };
         this._sendWSMessage(ws, replyMessage.toJSON());
+        this.log(INFO, `WS passthrough response for ${Utils.safeJSONStringify(logMessage)} IS ${Utils.safeJSONStringify(replyMessage)}`);
       })
       .catch((err) => {
+        this.log(FATAL, err);
         let reason;
         if (err.result && err.result.reason) {
           reason = err.result.reason;
@@ -407,7 +412,6 @@ class ServiceRouter {
           result: reason
         };
         this._sendWSMessage(ws, replyMessage.toJSON());
-        this.log(FATAL, err);
       });
   }
 
@@ -659,6 +663,7 @@ class ServiceRouter {
         });
       })
       .catch((err) => {
+        this.log(FATAL, err);
         serverResponse.sendServerError(response, {
           result: {
             reason: err.message
@@ -681,6 +686,7 @@ class ServiceRouter {
         });
       })
       .catch((err) => {
+        this.log(FATAL, err);
         serverResponse.sendServerError(response, {
           result: {
             reason: err.message
@@ -705,6 +711,7 @@ class ServiceRouter {
       try {
         umf = UMFMessage.createMessage(Utils.safeJSONParse(umf));
       } catch (err) {
+        this.log(FATAL, err);
         serverResponse.sendInvalidRequest(response);
         return;
       }
@@ -721,6 +728,7 @@ class ServiceRouter {
           });
         })
         .catch((err) => {
+          this.log(FATAL, err);
           serverResponse.sendResponse(err.statusCode, response, {
             result: {
               reason: data.result.reason
