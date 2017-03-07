@@ -409,7 +409,7 @@ class ServiceRouter {
           result: data.result
         };
         this._sendWSMessage(ws, replyMessage.toJSON());
-        this.log(INFO, `WS passthrough response for ${Utils.safeJSONStringify(logMessage)} IS ${Utils.safeJSONStringify(replyMessage)}`);
+        this.log(INFO, `WS passthrough response for ${Utils.safeJSONStringify(longMessage)} IS ${Utils.safeJSONStringify(replyMessage)}`);
       })
       .catch((err) => {
         this.log(FATAL, err);
