@@ -87,7 +87,8 @@ config.init('./config/config.json')
       * Initialize hydra for use by Service Router.
       */
       hydra.init(config.hydra)
-        .then(() => {
+        .then((newConfig) => {
+          config = newConfig;
           return hydra.registerService();
         })
         .then((serviceInfo) => {
