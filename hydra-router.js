@@ -16,7 +16,6 @@ let routeList = [
 ];
 
 let appLogger;
-const Queuer = require('fwsp-queuer');
 
 let config = require('fwsp-config');
 config.init('./config/config.json')

@@ -11,7 +11,7 @@ const querystring = require('querystring');
 const Route = require('route-parser');
 const version = require('./package.json').version;
 const serverRequest = require('request');
-const Queuer = require('fwsp-queuer');
+const Queuer = require('./queuer');
 
 const INFO = 'info';
 const ERROR = 'error';
@@ -61,7 +61,7 @@ class ServiceRouter {
     hydra.on('message', this._handleIncomingChannelMessage);
 
     this.queuer = new Queuer();
-    this.queuer.open(config.queuer);
+    this.queuer.init(hydra.getClonedRedisClient(), 3);
 
     this.routerTable = routesObj;
     this._refreshRoutes();
