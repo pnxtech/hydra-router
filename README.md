@@ -1,7 +1,5 @@
 ![logo](hydra-router.png)
 
-[![Join the chat at https://gitter.im/flywheelsports/fwsp-hydra-router](https://badges.gitter.im/flywheelsports/fwsp-hydra-router.svg)](https://gitter.im/flywheelsports/fwsp-hydra-router?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 Hydra Router is a service-aware router which can direct HTTP and WebSocket message requests to registered services. It was was announced at EmpireNode 2016.
 If you'd like to learn more about Hydra visit the [github repo](https://github.com/flywheelsports/fwsp-hydra) for a list of articles and videos.
 
