@@ -104,16 +104,22 @@ config.init('./config/config.json')
             appLogger[entry.type](entry);
           });
 
+          process.on('cleanup', () => {
+            hydra.shutdown();
+            process.exit(1);
+          });
+          process.on('SIGTERM', () => process.emit('cleanup'));
+          process.on('SIGINT', () => process.emit('cleanup'));
+
           process.on('uncaughtException', (err) => {
             let stack = err.stack;
             delete err.__cached_trace__;
             delete err.__previous__;
             delete err.domain;
-
             appLogger.fatal({
               stack
             });
-            process.exit(1);
+            process.emit('cleanup');
           });
 
           /**
