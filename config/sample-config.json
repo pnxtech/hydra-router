@@ -3,7 +3,7 @@
   "processes": 0,
   "externalRoutes": {},
   "risingStack": false,
-  "debugLogging": false,  
+  "debugLogging": false,
   "hydra": {
     "serviceName": "hydra-router",
     "serviceDescription": "Service Router",
@@ -26,10 +26,5 @@
       "port": 6379,
       "db": 15
     }
-  },
-  "queuer": {
-    "url": "redis",
-    "port": 6379,
-    "db": 3
   }
 }
