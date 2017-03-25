@@ -26,7 +26,7 @@ config.init('./config/config.json')
     const http = require('http');
     const cluster = require('cluster');
     const os = require('os');
-    const hydra = require('fwsp-hydra');
+    const hydra = require('hydra');
     const Utils = require('fwsp-jsutils');
     const version = require('./package.json').version;
     const serviceRouter = require('./servicerouter');
