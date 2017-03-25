@@ -1,7 +1,7 @@
 ![logo](hydra-router.png)
 
 Hydra Router is a service-aware router which can direct HTTP and WebSocket message requests to registered services. It was was announced at EmpireNode 2016.
-If you'd like to learn more about Hydra visit the [github repo](https://github.com/flywheelsports/fwsp-hydra) for a list of articles and videos.
+If you'd like to learn more about Hydra visit the [github repo](https://github.com/flywheelsports/hydra) for a list of articles and videos.
 
 ---
 
