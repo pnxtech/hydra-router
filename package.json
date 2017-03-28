@@ -1,6 +1,6 @@
 {
   "name": "hydra-router",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A service which routes requests to hydra-based microservices",
   "author": {
     "name": "Carlos Justiniano",
@@ -31,7 +31,9 @@
   },
   "devDependencies": {
     "chai": "3.5.0",
-    "eslint": "3.17.1",
+    "eslint": "3.18.0",
+    "eslint-config-google": "0.7.1",
+    "eslint-plugin-mocha": "4.9.0",
     "mocha": "3.2.0",
     "superagent": "3.5.0"
   }
