@@ -7,7 +7,6 @@ const serverResponse = new ServerResponse;
 const Utils = require('fwsp-jsutils');
 const UMFMessage = require('fwsp-umf-message');
 const url = require('url');
-const querystring = require('querystring');
 const Route = require('route-parser');
 const version = require('./package.json').version;
 const serverRequest = require('request');
@@ -24,6 +23,10 @@ let wsClients = {};
 * @description A module which uses Hydra to route service requests.
 */
 class ServiceRouter {
+  /**
+  * @name constructor
+  * @return {undefined}
+  */
   constructor() {
     this.config = null;
     this.routerTable = null;
@@ -38,6 +41,8 @@ class ServiceRouter {
   * @summary Initialize the service router using a route object.
   * @param {object} config - configuration
   * @param {object} routesObj - routes object
+  * @param {object} appLogger - logging object
+  * @return {undefined}
   */
   init(config, routesObj, appLogger) {
     this.config = config;
@@ -87,6 +92,7 @@ class ServiceRouter {
   * @summary send websocket message in short UMF format
   * @param {object} ws - websocket
   * @param {object} message - umf formatted message
+  * @return {undefined}
   */
   _sendWSMessage(ws, message) {
     let msg = UMFMessage.createMessage(message);
@@ -97,6 +103,7 @@ class ServiceRouter {
   * @name _handleIncomingChannelMessage
   * @summary Handle incoming UMF messages from other services
   * @param {object} msg - UMF formated message
+  * @return {undefined}
   */
   _handleIncomingChannelMessage(msg) {
     this.log(INFO, `Incoming channel message: ${Utils.safeJSONStringify(msg)}`);
@@ -154,7 +161,7 @@ class ServiceRouter {
   * @return {object} Promise - promise resolving if success or rejection otherwise
   */
   routeRequest(request, response) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _reject) => {
       // Handle CORS preflight
       if (request.method === 'OPTIONS') {
         // allow-headers below are in lowercase per: https://nodejs.org/api/http.html#http_message_headers
@@ -183,7 +190,7 @@ class ServiceRouter {
 
       let requestUrl = request.url;
 
-      if (requestUrl[requestUrl.length-1] === '/') {
+      if (requestUrl[requestUrl.length - 1] === '/') {
         response.writeHead(302, {
           'Location': requestUrl.substring(0, requestUrl.length - 1)
         });
@@ -224,7 +231,7 @@ class ServiceRouter {
           matchResult = {
             serviceName: segs[1]
           };
-          segs.splice(1,1);
+          segs.splice(1, 1);
           requestUrl = segs.join('/');
           if (requestUrl === '/') {
             requestUrl = '';
@@ -299,7 +306,7 @@ class ServiceRouter {
                     method: request.method,
                     headers: request.headers
                   };
-                  serverRequest(options, (error, response, body) => {
+                  serverRequest(options, (error, _response, _body) => {
                     if (error) {
                       if (error.code === 'ECONNREFUSED') {
                         // caller is no longer available.
@@ -393,6 +400,7 @@ class ServiceRouter {
   * @summary Route websocket request throuigh HTTP
   * @param {object} ws - websocket
   * @param {object} message - UMF message
+  * @return {undefined}
   */
   wsRouteThroughHttp(ws, message) {
     let longMessage = UMFMessage.createMessage(message);
@@ -432,6 +440,7 @@ class ServiceRouter {
   * @summary Send a message on socket connect
   * @param {object} ws - websocket
   * @param {number} id - connection id if any
+  * @return {undefined}
   */
   sendConnectMessage(ws, id) {
     ws.id = id || Utils.shortID();
@@ -455,6 +464,7 @@ class ServiceRouter {
   * @summary Route a websocket message
   * @param {object} ws - websocket
   * @param {string} message - UMF message in string format
+  * @return {undefined}
   */
   routeWSMessage(ws, message) {
     if (this.config.debugLogging) {
@@ -489,7 +499,7 @@ class ServiceRouter {
       this.wsRouteThroughHttp(ws, msg.toJSON());
     } else {
       switch (msg.type) {
-        case 'ping':
+        case 'ping': {
           let newMsg = UMFMessage.createMessage({
             to: msg.from,
             rmid: msg.mid,
@@ -499,7 +509,8 @@ class ServiceRouter {
           });
           this._sendWSMessage(ws, newMsg.toJSON());
           return;
-        case 'reconnect':
+        }
+        case 'reconnect': {
           if (!msg.body.id) {
             let umf = UMFMessage.createMessage({
               to: msg.from,
@@ -525,6 +536,7 @@ class ServiceRouter {
             }, 0);
           }
           return;
+        }
       }
 
       let toRoute = UMFMessage.parseRoute(msg.to);
@@ -565,6 +577,7 @@ class ServiceRouter {
   * @name wsDisconnect
   * @summary handle websocket disconnect
   * @param {object} ws - websocket
+  * @return {undefined}
   */
   wsDisconnect(ws) {
     ws.close();
@@ -578,6 +591,7 @@ class ServiceRouter {
   * @param {object} matchResult - route match results
   * @param {object} request - Node HTTP request object
   * @param {object} response - Node HTTP response object
+  * @return {undefined}
   */
   _handleRouterRequest(matchResult, request, response) {
     if (matchResult.pattern === '/v1/router/list/:thing') {
@@ -608,6 +622,7 @@ class ServiceRouter {
   * @summary Handle list routes requests. /v1/router/version.
   * @private
   * @param {object} response - Node HTTP response object
+  * @return {undefined}
   */
   _handleRouteVersion(response) {
     serverResponse.sendOk(response, {
@@ -622,6 +637,7 @@ class ServiceRouter {
   * @summary Handle list routes requests. /v1/router/list/routes.
   * @private
   * @param {object} response - Node HTTP response object
+  * @return {undefined}
   */
   _handleRouteListRoutes(response) {
     let routeList = [];
@@ -645,13 +661,14 @@ class ServiceRouter {
   * @summary Handle list services requests. /v1/router/list/services.
   * @private
   * @param {object} response - Node HTTP response object
+  * @return {undefined}
   */
   _handleRouteListServices(response) {
     let findItemData = (space, key, instanceID) => {
       if (!space[key]) {
         return {};
       }
-      return space[key].find(item => item.instanceID === instanceID);
+      return space[key].find((item) => item.instanceID === instanceID);
     };
 
     hydra.getServiceHealthAll()
@@ -693,6 +710,7 @@ class ServiceRouter {
   * @summary Handle request to list nodes
   * @private
   * @param {object} response - Node HTTP response object
+  * @return {undefined}
   */
   _handleRouteListNodes(response) {
     hydra.getServiceNodes()
@@ -717,6 +735,7 @@ class ServiceRouter {
   * @private
   * @param {object} request - Node HTTP request object
   * @param {object} response - Node HTTP response object
+  * @return {undefined}
   */
   _handleMessage(request, response) {
     let umf = '';
@@ -747,7 +766,7 @@ class ServiceRouter {
           this.log(FATAL, err);
           serverResponse.sendResponse(err.statusCode, response, {
             result: {
-              reason: data.result.reason
+              reason: err.message
             }
           });
         });
@@ -758,6 +777,7 @@ class ServiceRouter {
   * @name _refreshRoutes
   * @summary Refresh router routes.
   * @param {string} service - if undefined then all service routes will be refreshed otherwise only the route for a specific service will be updated
+  * @return {undefined}
   */
   _refreshRoutes(service) {
     hydra.getAllServiceRoutes()

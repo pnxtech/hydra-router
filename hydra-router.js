@@ -27,10 +27,8 @@ config.init('./config/config.json')
     const cluster = require('cluster');
     const os = require('os');
     const hydra = require('hydra');
-    const Utils = require('fwsp-jsutils');
     const version = require('./package.json').version;
     const serviceRouter = require('./servicerouter');
-    const url = require('url');
     const WebSocketServer = require('uws').Server;
     config.version = version;
     config.hydra.serviceVersion = version;
@@ -80,6 +78,7 @@ config.init('./config/config.json')
     /**
     * @name initWorker
     * @summary Initialize the core process functionality.
+    * @return {undefined}  -
     */
     function initWorker() {
       /**
@@ -135,7 +134,7 @@ config.init('./config/config.json')
           /**
           * Setup websocket message handler.
           */
-          let wss = new WebSocketServer({ server: server });
+          let wss = new WebSocketServer({server: server});
           wss.on('connection', (ws) => {
             serviceRouter.sendConnectMessage(ws);
 
