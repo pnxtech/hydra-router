@@ -22,9 +22,7 @@
       }
     },
     "redis": {
-      "url": "redis",
-      "port": 6379,
-      "db": 15
+      "url": "redis://localhost:6379/15"
     }
   }
 }
