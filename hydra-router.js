@@ -105,11 +105,10 @@ config.init('./config/config.json')
 
           process.on('cleanup', () => {
             hydra.shutdown();
-            process.exit(1);
+            process.exit(0);
           });
           process.on('SIGTERM', () => process.emit('cleanup'));
           process.on('SIGINT', () => process.emit('cleanup'));
-
           process.on('uncaughtException', (err) => {
             let stack = err.stack;
             delete err.__cached_trace__;
