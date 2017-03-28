@@ -27,7 +27,7 @@
     "fwsp-umf-message": "0.4.3",
     "request": "2.81.0",
     "route-parser": "0.0.5",
-    "uws": "0.13.0"
+    "uws": "0.14.1"
   },
   "devDependencies": {
     "chai": "3.5.0",
