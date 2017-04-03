@@ -162,6 +162,8 @@ class ServiceRouter {
   */
   routeRequest(request, response) {
     return new Promise((resolve, _reject) => {
+      let tracer = Utils.shortID();
+
       // Handle CORS preflight
       if (request.method === 'OPTIONS') {
         // allow-headers below are in lowercase per: https://nodejs.org/api/http.html#http_message_headers
@@ -178,7 +180,7 @@ class ServiceRouter {
 
       if (this.config.debugLogging) {
         this.log(INFO, {
-          marker: 'HR: ',
+          tracer: `HR: tracer=${tracer}`,
           url: request.url,
           method: request.method,
           originalUrl: request.originalUrl,
@@ -197,16 +199,16 @@ class ServiceRouter {
         });
         response.end();
         let who = request.headers['referer'] || 'unknown';
-        this.log(INFO, `HR: Performing 302 redirect by ${who}`);
+        this.log(INFO, `HR: [${tracer}] Performing 302 redirect by ${who}`);
         return;
       }
 
       let urlPath = `http://${request.headers['host']}${requestUrl}`;
       let urlData = url.parse(urlPath);
       if (request.headers['referer']) {
-        this.log(INFO, `HR: Access ${urlPath} via ${request.headers['referer']}`);
+        this.log(INFO, `HR: [${tracer}] Access ${urlPath} via ${request.headers['referer']}`);
       } else {
-        this.log(INFO, `HR: Request for ${urlPath}`);
+        this.log(INFO, `HR: [${tracer}] Request for ${urlPath}`);
       }
 
       let matchResult = this._matchRoute(urlData);
@@ -257,17 +259,18 @@ class ServiceRouter {
               from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
               body: Utils.safeJSONParse(body) || {}
             });
+            message.mid = `${message.mid}-${tracer}`;
             if (request.headers['authorization']) {
               message.authorization = request.headers['authorization'];
             }
             hydra.makeAPIRequest(message.toJSON())
               .then((data) => {
-                this.log(INFO, `HR: ${matchResult.serviceName} responded with ${Utils.safeJSONStringify(data)}`);
+                this.log(INFO, `HR: [${tracer}] ${matchResult.serviceName} responded with ${Utils.safeJSONStringify(data)}`);
                 serverResponse.sendResponse(data.statusCode, response, data);
                 resolve();
               })
               .catch((err) => {
-                this.log(FATAL, `HR: ${err.message}`);
+                this.log(FATAL, `HR: [${tracer}] ${err.message}`);
                 this.log(FATAL, err);
                 let reason;
                 if (err.result && err.result.reason) {
@@ -278,7 +281,8 @@ class ServiceRouter {
                 serverResponse.sendResponse(err.statusCode, response, {
                   result: {
                     reason
-                  }
+                  },
+                  tracer
                 });
                 resolve();
               });
@@ -307,21 +311,26 @@ class ServiceRouter {
                     method: request.method,
                     headers: request.headers
                   };
-                  this.log(INFO, `HR: Request ${Utils.safeJSONStringify(options)}`);
+                  options.headers['X-Hydra-Tracer'] = tracer;
+                  response.writeHead(ServerResponse.HTTP_OK, {
+                    'X-Hydra-Tracer': tracer
+                  });
+                  this.log(INFO, `HR: [${tracer}] Request ${Utils.safeJSONStringify(options)}`);
                   serverRequest(options, (error, _response, _body) => {
                     if (error) {
                       if (error.code === 'ECONNREFUSED') {
                         // caller is no longer available.
-                        this.log(FATAL, `ECONNREFUSED at ${url} - no longer available?`);
+                        this.log(FATAL, `HR: [${tracer}] ECONNREFUSED at ${url} - no longer available?`);
                       }
                     }
                   }).pipe(response);
                 } else {
-                  let msg = `HR: Unavailable ${matchResult.serviceName} instances`;
+                  let msg = `HR: [${tracer}] Unavailable ${matchResult.serviceName} instances`;
                   serverResponse.sendResponse(ServerResponse.HTTP_SERVICE_UNAVAILABLE, response, {
                     result: {
                       reason: msg
-                    }
+                    },
+                    tracer
                   });
                   this.log(FATAL, msg);
                 }
@@ -339,59 +348,65 @@ class ServiceRouter {
             message.authorization = request.headers['authorization'];
           }
           let msg = UMFMessage.createMessage(message).toJSON();
-          this.log(INFO, `HR: Calling remote service ${Utils.safeJSONStringify(msg)}`);
+          msg.mid = `${msg.mid}-${tracer}`;
+          this.log(INFO, `HR: [${tracer}] Calling remote service ${Utils.safeJSONStringify(msg)}`);
           hydra.makeAPIRequest(msg)
             .then((data) => {
               if (data.headers) {
                 let headers = {
                   'Content-Type': data.headers['content-type'],
-                  'Content-Length': data.headers['content-length']
+                  'Content-Length': data.headers['content-length'],
+                  'X-Hydra-Tracer': tracer
                 };
                 response.writeHead(ServerResponse.HTTP_OK, headers);
                 response.write(data.body);
                 response.end();
 
                 if (data.body) {
-                  this.log(INFO, `HR: Response from service (${msg.to}): ${Utils.safeJSONStringify(data.body)}`);
+                  this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): ${Utils.safeJSONStringify(data.body)}`);
                 }
               } else {
                 if (data.statusCode) {
                   serverResponse.sendResponse(data.statusCode, response, {
-                    result: data.result
+                    result: data.result,
+                    tracer
                   });
                   if (data.result) {
-                    this.log(INFO, `HR: Response from service (${msg.to}): status(${data.statusCode}): ${Utils.safeJSONStringify(data.result)}`);
+                    this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): status(${data.statusCode}): ${Utils.safeJSONStringify(data.result)}`);
                   }
                 } else if (data.code) {
                   serverResponse.sendResponse(data.code, response, {
-                    result: {}
+                    result: {},
+                    tracer
                   });
                   if (data.code) {
-                    this.log(INFO, `HR: Response from service (${msg.to}): status(${data.statusCode}): {}`);
+                    this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): status(${data.statusCode}): {}`);
                   }
                 } else {
                   serverResponse.sendResponse(serverResponse.HTTP_NOT_FOUND, response, {
-                    result: {}
+                    result: {},
+                    tracer
                   });
-                  this.log(ERROR, `HR: Response from service (${msg.to}): status(HTTP_NOT_FOUND): {}`);
+                  this.log(ERROR, `HR: [${tracer}] Response from service (${msg.to}): status(HTTP_NOT_FOUND): {}`);
                 }
               }
               resolve();
             })
             .catch((err) => {
-              this.log(FATAL, `HR: ${err.message}`);
+              this.log(FATAL, `HR: [${tracer}] ${err.message}`);
               this.log(FATAL, err);
               let msg = err.result.reason;
               serverResponse.sendResponse(err.statusCode, response, {
                 result: {
                   reason: msg
-                }
+                },
+                tracer
               });
               resolve();
             });
         }
       } else {
-        this.log(ERROR, `HR: No service match for ${request.url}`);
+        this.log(ERROR, `HR: [${tracer}] No service match for ${request.url}`);
         serverResponse.sendNotFound(response);
         resolve();
       }
