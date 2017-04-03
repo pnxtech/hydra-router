@@ -51,7 +51,7 @@ class ServiceRouter {
       let newRouteItems = [];
       let routes = routesObj[serviceName];
       routes.forEach((routePattern) => {
-        this.log(INFO, `${serviceName} adding ${routePattern}`);
+        this.log(INFO, `HR: ${serviceName} adding ${routePattern}`);
         let idx = routePattern.indexOf(']');
         if (idx > -1) {
           routePattern = routePattern.substring(idx + 1);
@@ -106,7 +106,7 @@ class ServiceRouter {
   * @return {undefined}
   */
   _handleIncomingChannelMessage(msg) {
-    this.log(INFO, `Incoming channel message: ${Utils.safeJSONStringify(msg)}`);
+    this.log(INFO, `HR: Incoming channel message: ${Utils.safeJSONStringify(msg)}`);
 
     let message = UMFMessage.createMessage(msg);
     if (message.body.action === 'refresh') {
@@ -139,7 +139,7 @@ class ServiceRouter {
   _matchRoute(urlData) {
     for (let serviceName of Object.keys(this.routerTable)) {
       for (let routeEntry of this.routerTable[serviceName]) {
-        let matchTest = routeEntry.route.match(urlData.path);
+        let matchTest = routeEntry.route.match(urlData.pathname);
         if (matchTest) {
           return {
             serviceName,
@@ -149,7 +149,7 @@ class ServiceRouter {
         }
       }
     }
-    this.log(INFO, `${urlData.path} was not matched to a route`);
+    this.log(INFO, `HR: ${urlData.pathname} was not matched to a route`);
     return null;
   }
 
@@ -162,6 +162,8 @@ class ServiceRouter {
   */
   routeRequest(request, response) {
     return new Promise((resolve, _reject) => {
+      let tracer = Utils.shortID();
+
       // Handle CORS preflight
       if (request.method === 'OPTIONS') {
         // allow-headers below are in lowercase per: https://nodejs.org/api/http.html#http_message_headers
@@ -178,6 +180,7 @@ class ServiceRouter {
 
       if (this.config.debugLogging) {
         this.log(INFO, {
+          tracer: `HR: tracer=${tracer}`,
           url: request.url,
           method: request.method,
           originalUrl: request.originalUrl,
@@ -196,17 +199,16 @@ class ServiceRouter {
         });
         response.end();
         let who = request.headers['referer'] || 'unknown';
-        this.log(INFO, `Performing 302 redirect by ${who}`);
+        this.log(INFO, `HR: [${tracer}] Performing 302 redirect by ${who}`);
         return;
       }
 
       let urlPath = `http://${request.headers['host']}${requestUrl}`;
       let urlData = url.parse(urlPath);
-
       if (request.headers['referer']) {
-        this.log(INFO, `Access ${urlPath} via ${request.headers['referer']}`);
+        this.log(INFO, `HR: [${tracer}] Access ${urlPath} via ${request.headers['referer']}`);
       } else {
-        this.log(INFO, `Request for ${urlPath}`);
+        this.log(INFO, `HR: [${tracer}] Request for ${urlPath}`);
       }
 
       let matchResult = this._matchRoute(urlData);
@@ -257,16 +259,18 @@ class ServiceRouter {
               from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
               body: Utils.safeJSONParse(body) || {}
             });
+            message.mid = `${message.mid}-${tracer}`;
             if (request.headers['authorization']) {
               message.authorization = request.headers['authorization'];
             }
             hydra.makeAPIRequest(message.toJSON())
               .then((data) => {
-                this.log(INFO, `${matchResult.serviceName} responded with ${Utils.safeJSONStringify(data)}`);
+                this.log(INFO, `HR: [${tracer}] ${matchResult.serviceName} responded with ${Utils.safeJSONStringify(data)}`);
                 serverResponse.sendResponse(data.statusCode, response, data);
                 resolve();
               })
               .catch((err) => {
+                this.log(FATAL, `HR: [${tracer}] ${err.message}`);
                 this.log(FATAL, err);
                 let reason;
                 if (err.result && err.result.reason) {
@@ -277,7 +281,8 @@ class ServiceRouter {
                 serverResponse.sendResponse(err.statusCode, response, {
                   result: {
                     reason
-                  }
+                  },
+                  tracer
                 });
                 resolve();
               });
@@ -306,20 +311,26 @@ class ServiceRouter {
                     method: request.method,
                     headers: request.headers
                   };
+                  options.headers['X-Hydra-Tracer'] = tracer;
+                  response.writeHead(ServerResponse.HTTP_OK, {
+                    'X-Hydra-Tracer': tracer
+                  });
+                  this.log(INFO, `HR: [${tracer}] Request ${Utils.safeJSONStringify(options)}`);
                   serverRequest(options, (error, _response, _body) => {
                     if (error) {
                       if (error.code === 'ECONNREFUSED') {
                         // caller is no longer available.
-                        this.log(FATAL, `ECONNREFUSED at ${url} - no longer available?`);
+                        this.log(FATAL, `HR: [${tracer}] ECONNREFUSED at ${url} - no longer available?`);
                       }
                     }
                   }).pipe(response);
                 } else {
-                  let msg = `Unavailable ${matchResult.serviceName} instances`;
+                  let msg = `HR: [${tracer}] Unavailable ${matchResult.serviceName} instances`;
                   serverResponse.sendResponse(ServerResponse.HTTP_SERVICE_UNAVAILABLE, response, {
                     result: {
                       reason: msg
-                    }
+                    },
+                    tracer
                   });
                   this.log(FATAL, msg);
                 }
@@ -337,58 +348,65 @@ class ServiceRouter {
             message.authorization = request.headers['authorization'];
           }
           let msg = UMFMessage.createMessage(message).toJSON();
-          this.log(INFO, `Calling remote service ${Utils.safeJSONStringify(msg)}`);
+          msg.mid = `${msg.mid}-${tracer}`;
+          this.log(INFO, `HR: [${tracer}] Calling remote service ${Utils.safeJSONStringify(msg)}`);
           hydra.makeAPIRequest(msg)
             .then((data) => {
               if (data.headers) {
                 let headers = {
                   'Content-Type': data.headers['content-type'],
-                  'Content-Length': data.headers['content-length']
+                  'Content-Length': data.headers['content-length'],
+                  'X-Hydra-Tracer': tracer
                 };
                 response.writeHead(ServerResponse.HTTP_OK, headers);
                 response.write(data.body);
                 response.end();
 
                 if (data.body) {
-                  this.log(INFO, `Response from service (${msg.to}): ${Utils.safeJSONStringify(data.body)}`);
+                  this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): ${Utils.safeJSONStringify(data.body)}`);
                 }
               } else {
                 if (data.statusCode) {
                   serverResponse.sendResponse(data.statusCode, response, {
-                    result: data.result
+                    result: data.result,
+                    tracer
                   });
                   if (data.result) {
-                    this.log(INFO, `Response from service (${msg.to}): status(${data.statusCode}): ${Utils.safeJSONStringify(data.result)}`);
+                    this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): status(${data.statusCode}): ${Utils.safeJSONStringify(data.result)}`);
                   }
                 } else if (data.code) {
                   serverResponse.sendResponse(data.code, response, {
-                    result: {}
+                    result: {},
+                    tracer
                   });
                   if (data.code) {
-                    this.log(INFO, `Response from service (${msg.to}): status(${data.statusCode}): {}`);
+                    this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): status(${data.statusCode}): {}`);
                   }
                 } else {
                   serverResponse.sendResponse(serverResponse.HTTP_NOT_FOUND, response, {
-                    result: {}
+                    result: {},
+                    tracer
                   });
-                  this.log(ERROR, `Response from service (${msg.to}): status(HTTP_NOT_FOUND): {}`);
+                  this.log(ERROR, `HR: [${tracer}] Response from service (${msg.to}): status(HTTP_NOT_FOUND): {}`);
                 }
               }
               resolve();
             })
             .catch((err) => {
+              this.log(FATAL, `HR: [${tracer}] ${err.message}`);
               this.log(FATAL, err);
               let msg = err.result.reason;
               serverResponse.sendResponse(err.statusCode, response, {
                 result: {
                   reason: msg
-                }
+                },
+                tracer
               });
               resolve();
             });
         }
       } else {
-        this.log(ERROR, `No service match for ${request.url}`);
+        this.log(ERROR, `HR: [${tracer}] No service match for ${request.url}`);
         serverResponse.sendNotFound(response);
         resolve();
       }
@@ -417,7 +435,7 @@ class ServiceRouter {
           result: data.result
         };
         this._sendWSMessage(ws, replyMessage.toJSON());
-        this.log(INFO, `WS passthrough response for ${Utils.safeJSONStringify(longMessage)} IS ${Utils.safeJSONStringify(replyMessage)}`);
+        this.log(INFO, `HR: WS passthrough response for ${Utils.safeJSONStringify(longMessage)} IS ${Utils.safeJSONStringify(replyMessage)}`);
       })
       .catch((err) => {
         this.log(FATAL, err);
@@ -455,7 +473,7 @@ class ServiceRouter {
         id: ws.id
       }
     });
-    this.log(INFO, `Sending connection message to new websocket client ${Utils.safeJSONStringify(welcomeMessage)}`);
+    this.log(INFO, `HR: Sending connection message to new websocket client ${Utils.safeJSONStringify(welcomeMessage)}`);
     this._sendWSMessage(ws, welcomeMessage.toJSON());
   }
 
@@ -468,7 +486,7 @@ class ServiceRouter {
   */
   routeWSMessage(ws, message) {
     if (this.config.debugLogging) {
-      this.log(INFO, `Incoming WS message: ${Utils.safeJSONStringify(message)}`);
+      this.log(INFO, `HR: Incoming WS message: ${Utils.safeJSONStringify(message)}`);
     }
 
     let umf = UMFMessage.createMessage({
@@ -555,7 +573,7 @@ class ServiceRouter {
                 error: `No ${toRoute.serviceName} instances available`
               };
               this._sendWSMessage(ws, umf.toJSON());
-              this.log(ERROR, `Unable to route WS message because an instance of ${toRoute.serviceName} isn't available`);
+              this.log(ERROR, `HR: Unable to route WS message because an instance of ${toRoute.serviceName} isn't available`);
               return;
             }
             toRoute = UMFMessage.parseRoute(msg.to);
@@ -567,7 +585,7 @@ class ServiceRouter {
               from: msg.from
             });
             hydra.sendMessage(newMsg.toJSON());
-            this.log(INFO, `Routed WS message ${Utils.safeJSONStringify(newMsg.toJSON())}`);
+            this.log(INFO, `HR: Routed WS message ${Utils.safeJSONStringify(newMsg.toJSON())}`);
           });
       }
     }
@@ -613,7 +631,7 @@ class ServiceRouter {
       this._handleMessage(request, response);
     } else {
       serverResponse.sendNotFound(response);
-      this.log(INFO, `${matchResult.pattern} was not matched to a route`);
+      this.log(INFO, `HR: ${matchResult.pattern} was not matched to a route`);
     }
   }
 
@@ -746,6 +764,7 @@ class ServiceRouter {
       try {
         umf = UMFMessage.createMessage(Utils.safeJSONParse(umf));
       } catch (err) {
+        this.log(FATAL, `HR: ${err.message}`);
         this.log(FATAL, err);
         serverResponse.sendInvalidRequest(response);
         return;
@@ -763,6 +782,7 @@ class ServiceRouter {
           });
         })
         .catch((err) => {
+          this.log(FATAL, `HR: ${err.message}`);
           this.log(FATAL, err);
           serverResponse.sendResponse(err.statusCode, response, {
             result: {
