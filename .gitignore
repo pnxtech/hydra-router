@@ -4,3 +4,6 @@ scratch.*
 node_modules/
 specs/properties.json
 config/config.json
+config/config.json-*
+.vscode/
+
