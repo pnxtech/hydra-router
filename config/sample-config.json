@@ -2,6 +2,8 @@
   "cluster": false,
   "processes": 0,
   "externalRoutes": {},
+  "routerToken": "",
+  "disableRouterEndpoint": false,
   "risingStack": false,
   "debugLogging": false,
   "hydra": {
@@ -17,7 +19,7 @@
         "elasticsearch": {
           "host": "localhost",
           "port": 9200,
-          "index": "hydra-router"
+          "index": "hydra"
         }
       }
     },

@@ -7,6 +7,7 @@ const serverResponse = new ServerResponse;
 const Utils = require('fwsp-jsutils');
 const UMFMessage = require('fwsp-umf-message');
 const url = require('url');
+const querystring = require('querystring');
 const Route = require('route-parser');
 const version = require('./package.json').version;
 const serverRequest = require('request');
@@ -205,6 +206,7 @@ class ServiceRouter {
 
       let urlPath = `http://${request.headers['host']}${requestUrl}`;
       let urlData = url.parse(urlPath);
+      console.log('urlData', urlData);
       if (request.headers['referer']) {
         this.log(INFO, `HR: [${tracer}] Access ${urlPath} via ${request.headers['referer']}`);
       } else {
@@ -227,8 +229,8 @@ class ServiceRouter {
         }
       }
 
+      let segs = urlData.path.split('/');
       if (!matchResult) {
-        let segs = urlData.path.split('/');
         if (this.serviceNames[segs[1]]) {
           matchResult = {
             serviceName: segs[1]
@@ -243,7 +245,18 @@ class ServiceRouter {
 
       if (matchResult) {
         if (matchResult.serviceName === hydra.getServiceName()) {
-          this._handleRouterRequest(matchResult, request, response);
+          let allowRouterCall = !(this.config.disableRouterEndpoint === true);
+          if (allowRouterCall && this.config.routerToken !== '') {
+            let qs = querystring.parse(urlData.query);
+            if (qs.token) {
+              allowRouterCall = (Utils.isUUID4(qs.token) && qs.token === this.config.routerToken);
+            }
+          }
+          if (allowRouterCall) {
+            this._handleRouterRequest(matchResult, request, response);
+          } else {
+            serverResponse.sendResponse(ServerResponse.HTTP_NOT_FOUND, response);
+          }
           resolve();
           return;
         }
