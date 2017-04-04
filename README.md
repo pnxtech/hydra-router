@@ -368,3 +368,27 @@ Response:
 ```
 
 You might have noticed a slight inconsistency in the response above.  Earlier examples display `status`, `statusText` and `result` JSON fields. The above example does not! The reason is because Hydra-Router returns the exact (untranslated) server response sent from the service endpoint.
+
+### Securing the router API
+
+The router API is exposed by default. In production deployments you'll likely what to either disable or restrict access to the router API.  You can do this by defining two keys in the config.json file:
+
+```javascript
+"disableRouterEndpoint": false,
+"routerToken": "",
+```
+
+If `disableRouterEndpoint` is set to `true` then access to the router API will be disabled and callers will receive an HTTP 404 response. If enabled, then access to the router API depends on the value of `routerToken`. If the token is blank then access is allowed - if a value is present it must be a [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier) token.
+
+```javascript
+"disableRouterEndpoint": false,
+"routerToken": "098ebe18-7e1b-4ddd-ae2a-cc6521e5b641",
+```
+
+> The dashes and segments sizes are significant and validated using a regular expression.
+
+The Hydra-Router will search for the presence of the token as query string parameters.
+
+```
+http://localhost:5353/v1/router/list/routes?token=098ebe18-7e1b-4ddd-ae2a-cc6521e5b641
+```
