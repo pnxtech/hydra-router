@@ -194,16 +194,6 @@ class ServiceRouter {
 
       let requestUrl = request.url;
 
-      if (requestUrl[requestUrl.length - 1] === '/') {
-        response.writeHead(302, {
-          'Location': requestUrl.substring(0, requestUrl.length - 1)
-        });
-        response.end();
-        let who = request.headers['referer'] || 'unknown';
-        this.log(INFO, `HR: [${tracer}] Performing 302 redirect by ${who}`);
-        return;
-      }
-
       let urlPath = `http://${request.headers['host']}${requestUrl}`;
       let urlData = url.parse(urlPath);
       console.log('urlData', urlData);
