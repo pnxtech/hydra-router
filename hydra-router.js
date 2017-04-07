@@ -8,6 +8,7 @@
 * Router route list.
 */
 let routeList = [
+  '[get]/',
   '[get]/v1/router/list/:thing',
   '[get]/v1/router/version',
   '[get]/v1/router/refresh',

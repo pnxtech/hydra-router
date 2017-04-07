@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Hydra Router Dashboard</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css">
+    <style>
+      .page-body {
+        margin-top: 8rem;
+        display: flex;
+        justify-content: space-around;
+        flex-wrap: wrap;
+      }
+      .container {
+        width: 100%;
+      }
+      .panel-max-width {
+        width: 40rem;
+        margin: 1rem;
+      }
+      .panel-body {
+        margin: 1rem;
+        height: 100%;
+        width: 100%;
+        overflow-y: auto;
+      }
+      .red {
+        color: red;
+      }
+      .black {
+        color: black;
+      }
+    </style>
+	</head>
+	<body>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+		<script src="https://unpkg.com/preact"></script>
+    <script>
+const {Component, h, render} = window.preact;
+
+class App extends Component {
+  componentDidMount() {
+    this.setState({title: 'Hydra Router Dashboard'});
+  }
+  render(props, state) {
+    return (
+      h('div', {id: 'app'},
+        h(Header, {title: state.title}),
+        h(Main)
+      )
+    );
+  }
+}
+
+class Header extends Component {
+  render(props, state) {
+    return (
+      h('nav', {class: 'navbar navbar-inverse navbar-fixed-top'},
+        h('div', {class: 'nav-header'},
+          h('a', {class: 'navbar-brand', href: '#'}, props.title)
+        )
+      )
+    );
+  }
+}
+
+class Panel extends Component {
+  render(props, state) {
+    return (
+      h('div', {class: 'panel panel-default panel-max-width'},
+        h('div', {class: 'panel-heading'},
+          h('h3', {class: 'panel-title'},
+            props.icon && (
+              h('div', {class: `${props.titleColor}`}, 
+                h('span', {class: `glyphicon ${props.icon}`, 'aria-hidden': true}),
+                h('span', {}, ` ${props.title}`)
+              )
+            ),
+            !props.icon && (props.title)
+          )
+        ),
+        h('div', {class: 'panel-body'}, props.body)
+      )
+    );
+  }
+}
+
+class Main extends Component {
+  componentDidMount() {
+    this.getNodeData();
+    setInterval(() => {
+      this.getNodeData();
+    }, 15000);
+  }
+
+  getNodeData() {
+    fetch('/v1/router/list/nodes')
+      .then((res) => {
+        return res.json();
+      })
+      .then((res) => {
+        this.setState({nodes: res.result});
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
+
+  render(props, state) {
+    const MAX_ELAPSED = 15; // in seconds
+    let tiles = null;
+
+    if (state.nodes) {
+      tiles = [];
+      state.nodes.forEach((node) => {
+        let content = [
+          h('p', {}, 
+            h('b', {}, 'Description: '),
+            node.serviceDescription
+          ),
+          h('p', {}, 
+            h('b', {}, 'InstanceID: '),
+            node.instanceID
+          ),
+          h('p', {}, 
+            h('b', {}, 'Version: '),
+            node.version
+          ),
+          h('p', {}, 
+            h('b', {}, 'IP/Port: '),
+            `${node.ip}:${node.port}`
+          ),
+          h('p', {}, 
+            h('b', {}, 'Updated on: '),
+            node.updatedOn
+          ),
+          h('p', {}, 
+            h('b', {}, 'Elapsed: '),
+            node.elapsed
+          ) 
+        ];
+        let icon;
+        let titleColor;
+        if (node.elapsed > MAX_ELAPSED) {
+          icon = 'glyphicon-circle-arrow-down';
+          titleColor= 'red';
+        } else {
+          icon = 'glyphicon-upload';
+          titleColor= 'black';
+        }
+        tiles.push(
+          h(Panel, {icon, title: node.serviceName, titleColor, body: content})
+        );
+      });
+    }
+    return (
+      h('div', {class: 'container'},
+        h('div', {class: 'page-body'}, tiles)
+      )
+    );
+  }
+}
+
+render(h(App), document.body);
+    </script>
+	</body>
+</html>
