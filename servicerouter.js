@@ -7,6 +7,8 @@ const serverResponse = new ServerResponse;
 const Utils = require('fwsp-jsutils');
 const UMFMessage = require('fwsp-umf-message');
 const url = require('url');
+const path = require('path');
+const fs = require('fs');
 const querystring = require('querystring');
 const Route = require('route-parser');
 const version = require('./package.json').version;
@@ -196,7 +198,7 @@ class ServiceRouter {
 
       let urlPath = `http://${request.headers['host']}${requestUrl}`;
       let urlData = url.parse(urlPath);
-      console.log('urlData', urlData);
+
       if (request.headers['referer']) {
         this.log(INFO, `HR: [${tracer}] Access ${urlPath} via ${request.headers['referer']}`);
       } else {
@@ -615,6 +617,17 @@ class ServiceRouter {
   * @return {undefined}
   */
   _handleRouterRequest(matchResult, request, response) {
+    if (matchResult.pattern === '/') {
+      let filePath = path.join(__dirname, 'public/index.html');
+      let stat = fs.statSync(filePath);
+      response.writeHead(ServerResponse.HTTP_OK, {
+        'Content-Type': 'text/html',
+        'Content-Length': stat.size
+      });
+      let readStream = fs.createReadStream(filePath);
+      readStream.pipe(response);
+      return;
+    }
     if (matchResult.pattern === '/v1/router/list/:thing') {
       if (matchResult.params.thing === 'routes') {
         this._handleRouteListRoutes(response);

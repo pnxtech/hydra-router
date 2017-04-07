@@ -1,4 +1,4 @@
-![logo](hydra-router.png)
+![logo](./hydra-router.png)
 
 Hydra Router is a service-aware router which can direct HTTP and WebSocket message requests to registered services. It was was announced at EmpireNode 2016.
 If you'd like to learn more about Hydra visit the [github repo](https://github.com/flywheelsports/hydra) for a list of articles and videos.
@@ -148,6 +148,20 @@ If an active instance of a service can't be found then Hydra-Router will reply w
 
 ## So what's the catch?
 HydraRouter can only be used with Hydra-enabled services and can only route JSON message payloads.  However, the most common HTTP verbs are supported so you can send GET, POST, DELETE and PUT requests.
+
+## Router Dashboard
+
+Hydra-Router can display a dashboard showing the status of itself and other services. The dashboard updates every 15 seconds showing problematic services in red.
+
+To access the router just point your browser to the root of a hydra-router:
+
+```
+http://localhost:5353/
+```
+
+![](./assets/Hydra_Router_Dashboard.png)
+
+If you need to deactivate or restrict access to the dashboard, see the `Securing the router` section below.
 
 ## Optional Router API
 
@@ -369,7 +383,7 @@ Response:
 
 You might have noticed a slight inconsistency in the response above.  Earlier examples display `status`, `statusText` and `result` JSON fields. The above example does not! The reason is because Hydra-Router returns the exact (untranslated) server response sent from the service endpoint.
 
-### Securing the router API
+### Securing the router
 
 The router API is exposed by default. In production deployments you'll likely what to either disable or restrict access to the router API.  You can do this by defining two keys in the config.json file:
 
