@@ -30,7 +30,7 @@ config.init('./config/config.json')
     const hydra = require('hydra');
     const version = require('./package.json').version;
     const serviceRouter = require('./servicerouter');
-    const WebSocketServer = require('uws').Server;
+    const WebSocketServer = require('ws').Server;
     config.version = version;
     config.hydra.serviceVersion = version;
 
