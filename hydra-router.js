@@ -108,8 +108,18 @@ config.init('./config/config.json')
             hydra.shutdown();
             process.exit(0);
           });
-          process.on('SIGTERM', () => process.emit('cleanup'));
-          process.on('SIGINT', () => process.emit('cleanup'));
+          process.on('SIGTERM', () => {
+            appLogger.fatal('Received SIGTERM');
+            process.emit('cleanup');
+          });
+          process.on('SIGINT', () => {
+            appLogger.fatal('Received SIGINT');
+            process.emit('cleanup');
+          });
+          process.on('unhandledRejection', (reason, _p) => {
+            appLogger.fatal(reason);
+            process.emit('cleanup');
+          });
           process.on('uncaughtException', (err) => {
             let stack = err.stack;
             delete err.__cached_trace__;

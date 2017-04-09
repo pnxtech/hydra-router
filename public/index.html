@@ -155,6 +155,9 @@ class Main extends Component {
           icon = 'glyphicon-upload';
           titleColor= 'black';
         }
+        if (node.serviceName === 'hydra-router') {
+          icon = 'glyphicon-random';
+        }
         tiles.push(
           h(Panel, {icon, title: node.serviceName, titleColor, body: content})
         );
