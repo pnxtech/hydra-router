@@ -49,6 +49,7 @@ class ServiceRouter {
   */
   init(config, routesObj, appLogger) {
     this.config = config;
+    this.serviceName = hydra.getServiceName();
     this.appLogger = appLogger;
     Object.keys(routesObj).forEach((serviceName) => {
       let newRouteItems = [];
@@ -130,292 +131,6 @@ class ServiceRouter {
         }
       }
     }
-  }
-
-  /**
-  * @name _matchRoute
-  * @summary Matches a route url against router table
-  * @private
-  * @param {object} urlData - information about the url request
-  * @return {object} routeInfo - object containing matching route info or null
-  */
-  _matchRoute(urlData) {
-    for (let serviceName of Object.keys(this.routerTable)) {
-      for (let routeEntry of this.routerTable[serviceName]) {
-        let matchTest = routeEntry.route.match(urlData.pathname);
-        if (matchTest) {
-          return {
-            serviceName,
-            params: matchTest,
-            pattern: routeEntry.pattern
-          };
-        }
-      }
-    }
-    this.log(INFO, `HR: ${urlData.pathname} was not matched to a route`);
-    return null;
-  }
-
-  /**
-  * @name routeRequest
-  * @summary Routes a request to an available service
-  * @param {object} request - Node HTTP request object
-  * @param {object} response - Node HTTP response object
-  * @return {object} Promise - promise resolving if success or rejection otherwise
-  */
-  routeRequest(request, response) {
-    return new Promise((resolve, _reject) => {
-      let tracer = Utils.shortID();
-
-      // Handle CORS preflight
-      if (request.method === 'OPTIONS') {
-        // allow-headers below are in lowercase per: https://nodejs.org/api/http.html#http_message_headers
-        response.writeHead(ServerResponse.HTTP_OK, {
-          'access-control-allow-origin': '*',
-          'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'access-control-allow-headers': 'accept, authorization, cache-control, content-type, x-requested-with',
-          'access-control-max-age': 10,
-          'Content-Type': 'application/json'
-        });
-        response.end();
-        return;
-      }
-
-      if (this.config.debugLogging) {
-        this.log(INFO, {
-          tracer: `HR: tracer=${tracer}`,
-          url: request.url,
-          method: request.method,
-          originalUrl: request.originalUrl,
-          callerIP: request.headers['x-forwarded-for'] || request.connection.remoteAddress,
-          body: (request.method === 'POST') ? request.body : {},
-          host: request.headers['host'],
-          userAgent: request.headers['user-agent']
-        });
-      }
-
-      let requestUrl = request.url;
-
-      let urlPath = `http://${request.headers['host']}${requestUrl}`;
-      let urlData = url.parse(urlPath);
-
-      if (request.headers['referer']) {
-        this.log(INFO, `HR: [${tracer}] Access ${urlPath} via ${request.headers['referer']}`);
-      } else {
-        this.log(INFO, `HR: [${tracer}] Request for ${urlPath}`);
-      }
-
-      let matchResult = this._matchRoute(urlData);
-      if (!matchResult) {
-        if (request.headers['referer']) {
-          let k = Object.keys(this.serviceNames);
-          for (let i = 0; i < k.length; i += 1) {
-            let serviceName = k[i];
-            if (request.headers['referer'].indexOf(`/${serviceName}`) > -1) {
-              matchResult = {
-                serviceName
-              };
-              break;
-            }
-          }
-        }
-      }
-
-      let segs = urlData.path.split('/');
-      if (!matchResult) {
-        if (this.serviceNames[segs[1]]) {
-          matchResult = {
-            serviceName: segs[1]
-          };
-          segs.splice(1, 1);
-          requestUrl = segs.join('/');
-          if (requestUrl === '/') {
-            requestUrl = '';
-          }
-        }
-      }
-
-      if (matchResult) {
-        if (matchResult.serviceName === hydra.getServiceName()) {
-          let allowRouterCall = !(this.config.disableRouterEndpoint === true);
-          if (allowRouterCall && this.config.routerToken !== '') {
-            let qs = querystring.parse(urlData.query);
-            if (qs.token) {
-              allowRouterCall = (Utils.isUUID4(qs.token) && qs.token === this.config.routerToken);
-            }
-          }
-          if (allowRouterCall) {
-            this._handleRouterRequest(matchResult, request, response);
-          } else {
-            serverResponse.sendResponse(ServerResponse.HTTP_NOT_FOUND, response);
-          }
-          resolve();
-          return;
-        }
-
-        if (request.method === 'POST' || request.method === 'PUT') {
-          let body = '';
-          request.on('data', (data) => {
-            body += data;
-          });
-          request.on('end', () => {
-            let message = UMFMessage.createMessage({
-              to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
-              from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
-              body: Utils.safeJSONParse(body) || {}
-            });
-            message.mid = `${message.mid}-${tracer}`;
-            if (request.headers['authorization']) {
-              message.authorization = request.headers['authorization'];
-            }
-            hydra.makeAPIRequest(message.toJSON())
-              .then((data) => {
-                this.log(INFO, `HR: [${tracer}] ${matchResult.serviceName} responded with ${Utils.safeJSONStringify(data)}`);
-                serverResponse.sendResponse(data.statusCode, response, data);
-                resolve();
-              })
-              .catch((err) => {
-                this.log(FATAL, `HR: [${tracer}] ${err.message}`);
-                this.log(FATAL, err);
-                let reason;
-                if (err.result && err.result.reason) {
-                  reason = err.result.reason;
-                } else {
-                  reason = err.message;
-                }
-                serverResponse.sendResponse(err.statusCode, response, {
-                  result: {
-                    reason
-                  },
-                  tracer
-                });
-                resolve();
-              });
-          });
-        } else {
-          /**
-          * Route non POST and PUT message types.
-          */
-
-          // if request isn't a JSON request then locate an service instance and passthrough the request in plain HTTP
-          if (request.headers['content-type'] !== 'application/json') {
-            hydra.getServicePresence(matchResult.serviceName)
-              .then((presenceInfo) => {
-                if (presenceInfo.length > 0) {
-                  let idx = Math.floor(Math.random() * presenceInfo.length);
-                  let presence = presenceInfo[idx];
-
-                  let segs = requestUrl.split('/');
-                  if (segs[1] === matchResult.serviceName) {
-                    requestUrl = '';
-                  }
-
-                  let url = `http://${presence.ip}:${presence.port}${requestUrl}`;
-                  let options = {
-                    uri: url,
-                    method: request.method,
-                    headers: request.headers
-                  };
-                  options.headers['X-Hydra-Tracer'] = tracer;
-                  response.writeHead(ServerResponse.HTTP_OK, {
-                    'X-Hydra-Tracer': tracer
-                  });
-                  this.log(INFO, `HR: [${tracer}] Request ${Utils.safeJSONStringify(options)}`);
-                  serverRequest(options, (error, _response, _body) => {
-                    if (error) {
-                      if (error.code === 'ECONNREFUSED') {
-                        // caller is no longer available.
-                        this.log(FATAL, `HR: [${tracer}] ECONNREFUSED at ${url} - no longer available?`);
-                      }
-                    }
-                  }).pipe(response);
-                } else {
-                  let msg = `HR: [${tracer}] Unavailable ${matchResult.serviceName} instances`;
-                  serverResponse.sendResponse(ServerResponse.HTTP_SERVICE_UNAVAILABLE, response, {
-                    result: {
-                      reason: msg
-                    },
-                    tracer
-                  });
-                  this.log(FATAL, msg);
-                }
-              });
-            return;
-          }
-
-          // this is a JSON request, package should contain a UMF message.
-          let message = {
-            to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
-            from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
-            body: {}
-          };
-          if (request.headers['authorization']) {
-            message.authorization = request.headers['authorization'];
-          }
-          let msg = UMFMessage.createMessage(message).toJSON();
-          msg.mid = `${msg.mid}-${tracer}`;
-          this.log(INFO, `HR: [${tracer}] Calling remote service ${Utils.safeJSONStringify(msg)}`);
-          hydra.makeAPIRequest(msg)
-            .then((data) => {
-              if (data.headers) {
-                let headers = {
-                  'Content-Type': data.headers['content-type'],
-                  'Content-Length': data.headers['content-length'],
-                  'X-Hydra-Tracer': tracer
-                };
-                response.writeHead(ServerResponse.HTTP_OK, headers);
-                response.write(data.body);
-                response.end();
-
-                if (data.body) {
-                  this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): ${Utils.safeJSONStringify(data.body)}`);
-                }
-              } else {
-                if (data.statusCode) {
-                  serverResponse.sendResponse(data.statusCode, response, {
-                    result: data.result,
-                    tracer
-                  });
-                  if (data.result) {
-                    this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): status(${data.statusCode}): ${Utils.safeJSONStringify(data.result)}`);
-                  }
-                } else if (data.code) {
-                  serverResponse.sendResponse(data.code, response, {
-                    result: {},
-                    tracer
-                  });
-                  if (data.code) {
-                    this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): status(${data.statusCode}): {}`);
-                  }
-                } else {
-                  serverResponse.sendResponse(serverResponse.HTTP_NOT_FOUND, response, {
-                    result: {},
-                    tracer
-                  });
-                  this.log(ERROR, `HR: [${tracer}] Response from service (${msg.to}): status(HTTP_NOT_FOUND): {}`);
-                }
-              }
-              resolve();
-            })
-            .catch((err) => {
-              this.log(FATAL, `HR: [${tracer}] ${err.message}`);
-              this.log(FATAL, err);
-              let msg = err.result.reason;
-              serverResponse.sendResponse(err.statusCode, response, {
-                result: {
-                  reason: msg
-                },
-                tracer
-              });
-              resolve();
-            });
-        }
-      } else {
-        this.log(ERROR, `HR: [${tracer}] No service match for ${request.url}`);
-        serverResponse.sendNotFound(response);
-        resolve();
-      }
-    });
   }
 
   /**
@@ -608,15 +323,343 @@ class ServiceRouter {
   }
 
   /**
+  * @name _matchRoute
+  * @summary Matches a route url against router table
+  * @private
+  * @param {object} urlData - information about the url request
+  * @return {object} routeInfo - object containing matching route info or null
+  */
+  _matchRoute(urlData) {
+    for (let serviceName of Object.keys(this.routerTable)) {
+      for (let routeEntry of this.routerTable[serviceName]) {
+        let matchTest = routeEntry.route.match(urlData.pathname);
+        if (matchTest) {
+          return {
+            serviceName,
+            params: matchTest,
+            pattern: routeEntry.pattern
+          };
+        }
+      }
+    }
+    this.log(INFO, `HR: ${urlData.pathname} was not matched to a route`);
+    return null;
+  }
+
+  /**
+  * @name routeRequest
+  * @summary Routes a request to an available service
+  * @param {object} request - Node HTTP request object
+  * @param {object} response - Node HTTP response object
+  * @return {object} Promise - promise resolving if success or rejection otherwise
+  */
+  routeRequest(request, response) {
+    return new Promise((resolve, reject) => {
+      if (request.method === 'OPTIONS') {
+        this._handleCORSReqest(request, response);
+        return;
+      }
+
+      let tracer = Utils.shortID();
+      if (this.config.debugLogging) {
+        this.log(INFO, {
+          tracer: `HR: tracer=${tracer}`,
+          url: request.url,
+          method: request.method,
+          originalUrl: request.originalUrl,
+          callerIP: request.headers['x-forwarded-for'] || request.connection.remoteAddress,
+          body: (request.method === 'POST') ? request.body : {},
+          host: request.headers['host'],
+          userAgent: request.headers['user-agent']
+        });
+      }
+
+      let requestUrl = request.url;
+      let urlPath = `http://${request.headers['host']}${requestUrl}`;
+      let urlData = url.parse(urlPath);
+
+      if (request.headers['referer']) {
+        this.log(INFO, `HR: [${tracer}] Access ${urlPath} via ${request.headers['referer']}`);
+      } else {
+        this.log(INFO, `HR: [${tracer}] Request for ${urlPath}`);
+      }
+
+      let matchResult = this._matchRoute(urlData);
+      if (!matchResult) {
+        if (request.headers['referer']) {
+          let k = Object.keys(this.serviceNames);
+          for (let i = 0; i < k.length; i += 1) {
+            let serviceName = k[i];
+            if (request.headers['referer'].indexOf(`/${serviceName}`) > -1) {
+              matchResult = {
+                serviceName
+              };
+              break;
+            }
+          }
+        }
+      }
+
+      let segs = urlData.path.split('/');
+      if (!matchResult) {
+        if (this.serviceNames[segs[1]]) {
+          matchResult = {
+            serviceName: segs[1]
+          };
+          segs.splice(1, 1);
+          requestUrl = segs.join('/');
+          if (requestUrl === '/') {
+            requestUrl = '';
+          }
+        }
+      }
+
+      if (!matchResult) {
+        this.log(ERROR, `HR: [${tracer}] No service match for ${request.url}`);
+        serverResponse.sendNotFound(response);
+        resolve();
+        return;
+      }
+
+      // is this a hydra-router API call?
+      if (matchResult.serviceName === this.serviceName) {
+        this._handleRouterRequest(urlData, matchResult, request, response);
+        resolve();
+        return;
+      }
+
+      if (request.method === 'POST' || request.method === 'PUT') {
+        this._handleHTTPPutOrPostRequest(tracer, matchResult, requestUrl, request, response, resolve, reject);
+      } else {
+        this._handleHTTPGetOrDeleteRequest(tracer, matchResult, requestUrl, request, response, resolve, reject);
+      }
+    });
+  }
+
+  /**
+  * @name _handleCORSReqest
+  * @summary handle a CORS preflight request
+  * @param {object} request - Node HTTP request object
+  * @param {object} response - Node HTTP response object
+  * @return {undefined}
+  */
+  _handleCORSReqest(request, response) {
+    // Handle CORS preflight
+    // allow-headers below are in lowercase per: https://nodejs.org/api/http.html#http_message_headers
+    response.writeHead(ServerResponse.HTTP_OK, {
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'access-control-allow-headers': 'accept, authorization, cache-control, content-type, x-requested-with',
+      'access-control-max-age': 10,
+      'Content-Type': 'application/json'
+    });
+    response.end();
+  }
+
+
+  /**
+  * @name _handleHTTPPutOrPostRequest
+  * @summary Handle HTTP PUT and POST requests
+  * @param {string} tracer - tag to mark HTTP call
+  * @param {object} matchResult - router match results object
+  * @param {string} requestUrl - request url
+  * @param {object} request - Node HTTP request object
+  * @param {object} response - Node HTTP response object
+  * @param {function} resolve - promise resolve handler
+  * @param {function} _reject - promise reject handler
+  * @return {undefined}
+  */
+  _handleHTTPPutOrPostRequest(tracer, matchResult, requestUrl, request, response, resolve, _reject) {
+    let body = '';
+    request.on('data', (data) => {
+      body += data;
+    });
+    request.on('end', () => {
+      let message = UMFMessage.createMessage({
+        to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
+        from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
+        body: Utils.safeJSONParse(body) || {}
+      });
+      message.mid = `${message.mid}-${tracer}`;
+      if (request.headers['authorization']) {
+        message.authorization = request.headers['authorization'];
+      }
+      hydra.makeAPIRequest(message.toJSON())
+        .then((data) => {
+          this.log(INFO, `HR: [${tracer}] ${matchResult.serviceName} responded with ${Utils.safeJSONStringify(data)}`);
+          serverResponse.sendResponse(data.statusCode, response, data);
+          resolve();
+        })
+        .catch((err) => {
+          this.log(FATAL, `HR: [${tracer}] ${err.message}`);
+          this.log(FATAL, err);
+          let reason;
+          if (err.result && err.result.reason) {
+            reason = err.result.reason;
+          } else {
+            reason = err.message;
+          }
+          serverResponse.sendResponse(err.statusCode, response, {
+            result: {
+              reason
+            },
+            tracer
+          });
+          resolve();
+        });
+    });
+  }
+
+  /**
+  * @name _handleHTTPGetOrDeleteRequest
+  * @summary Handle HTTP GET and DELETE requests
+  * @param {string} tracer - tag to mark HTTP call
+  * @param {object} matchResult - router match results object
+  * @param {string} requestUrl - request url
+  * @param {object} request - Node HTTP request object
+  * @param {object} response - Node HTTP response object
+  * @param {function} resolve - promise resolve handler
+  * @param {function} _reject - promise reject handler
+  * @return {undefined}
+  */
+  _handleHTTPGetOrDeleteRequest(tracer, matchResult, requestUrl, request, response, resolve, _reject) {
+    // if request isn't a JSON request then locate an service instance and passthrough the request in plain HTTP
+    if (request.headers['content-type'] !== 'application/json') {
+      hydra.getServicePresence(matchResult.serviceName)
+        .then((presenceInfo) => {
+          if (presenceInfo.length > 0) {
+            let idx = Math.floor(Math.random() * presenceInfo.length);
+            let presence = presenceInfo[idx];
+
+            let segs = requestUrl.split('/');
+            if (segs[1] === matchResult.serviceName) {
+              requestUrl = '';
+            }
+
+            let url = `http://${presence.ip}:${presence.port}${requestUrl}`;
+            let options = {
+              uri: url,
+              method: request.method,
+              headers: request.headers
+            };
+            options.headers['X-Hydra-Tracer'] = tracer;
+            response.writeHead(ServerResponse.HTTP_OK, {
+              'X-Hydra-Tracer': tracer
+            });
+            this.log(INFO, `HR: [${tracer}] Request ${Utils.safeJSONStringify(options)}`);
+            serverRequest(options, (error, _response, _body) => {
+              if (error) {
+                if (error.code === 'ECONNREFUSED') {
+                  // caller is no longer available.
+                  this.log(FATAL, `HR: [${tracer}] ECONNREFUSED at ${url} - no longer available?`);
+                }
+              }
+            }).pipe(response);
+          } else {
+            let msg = `HR: [${tracer}] Unavailable ${matchResult.serviceName} instances`;
+            serverResponse.sendResponse(ServerResponse.HTTP_SERVICE_UNAVAILABLE, response, {
+              result: {
+                reason: msg
+              },
+              tracer
+            });
+            this.log(FATAL, msg);
+          }
+        });
+      return;
+    }
+
+    // this is a JSON request, package should contain a UMF message.
+    let message = {
+      to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
+      from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
+      body: {}
+    };
+    if (request.headers['authorization']) {
+      message.authorization = request.headers['authorization'];
+    }
+    let msg = UMFMessage.createMessage(message).toJSON();
+    msg.mid = `${msg.mid}-${tracer}`;
+    this.log(INFO, `HR: [${tracer}] Calling remote service ${Utils.safeJSONStringify(msg)}`);
+    hydra.makeAPIRequest(msg)
+      .then((data) => {
+        if (data.headers) {
+          let headers = {
+            'Content-Type': data.headers['content-type'],
+            'Content-Length': data.headers['content-length'],
+            'X-Hydra-Tracer': tracer
+          };
+          response.writeHead(ServerResponse.HTTP_OK, headers);
+          response.write(data.body);
+          response.end();
+
+          if (data.body) {
+            this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): ${Utils.safeJSONStringify(data.body)}`);
+          }
+        } else {
+          if (data.statusCode) {
+            serverResponse.sendResponse(data.statusCode, response, {
+              result: data.result,
+              tracer
+            });
+            if (data.result) {
+              this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): status(${data.statusCode}): ${Utils.safeJSONStringify(data.result)}`);
+            }
+          } else if (data.code) {
+            serverResponse.sendResponse(data.code, response, {
+              result: {},
+              tracer
+            });
+            if (data.code) {
+              this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): status(${data.statusCode}): {}`);
+            }
+          } else {
+            serverResponse.sendResponse(serverResponse.HTTP_NOT_FOUND, response, {
+              result: {},
+              tracer
+            });
+            this.log(ERROR, `HR: [${tracer}] Response from service (${msg.to}): status(HTTP_NOT_FOUND): {}`);
+          }
+        }
+        resolve();
+      })
+      .catch((err) => {
+        this.log(FATAL, `HR: [${tracer}] ${err.message}`);
+        this.log(FATAL, err);
+        let msg = err.result.reason;
+        serverResponse.sendResponse(err.statusCode, response, {
+          result: {
+            reason: msg
+          },
+          tracer
+        });
+        resolve();
+      });
+  }
+
+  /**
   * @name _handleRouterRequest
   * @summary Handles requests intended for this router service.
   * @private
+  * @param {object} urlData - parsed URL data
   * @param {object} matchResult - route match results
   * @param {object} request - Node HTTP request object
   * @param {object} response - Node HTTP response object
   * @return {undefined}
   */
-  _handleRouterRequest(matchResult, request, response) {
+  _handleRouterRequest(urlData, matchResult, request, response) {
+    let allowRouterCall = !(this.config.disableRouterEndpoint === true);
+    if (allowRouterCall && this.config.routerToken !== '') {
+      let qs = querystring.parse(urlData.query);
+      if (qs.token) {
+        allowRouterCall = (Utils.isUUID4(qs.token) && qs.token === this.config.routerToken);
+      }
+    }
+    if (!allowRouterCall) {
+      serverResponse.sendResponse(ServerResponse.HTTP_NOT_FOUND, response);
+      return;
+    }
+
     if (matchResult.pattern === '/') {
       let filePath = path.join(__dirname, 'public/index.html');
       let stat = fs.statSync(filePath);
