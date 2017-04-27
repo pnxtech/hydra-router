@@ -3,7 +3,7 @@
 Hydra Router is a service-aware router which can direct HTTP and WebSocket message requests to registered services. It was announced at EmpireNode 2016.
 If you'd like to learn more about Hydra visit the [github repo](https://github.com/flywheelsports/hydra) for a list of articles and videos.
 
-Pull a prebuilt D®ocker container: https://hub.docker.com/r/flywheelsports/hydra-router/tags/
+Pull a prebuilt Docker container: https://hub.docker.com/r/flywheelsports/hydra-router/tags/
 
 ---
 
