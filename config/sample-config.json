@@ -6,6 +6,7 @@
   "disableRouterEndpoint": false,
   "risingStack": false,
   "debugLogging": false,
+  "queuerDB": 0,
   "hydra": {
     "serviceName": "hydra-router",
     "serviceDescription": "Service Router",
