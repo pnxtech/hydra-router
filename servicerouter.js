@@ -70,7 +70,8 @@ class ServiceRouter {
     hydra.on('message', this._handleIncomingChannelMessage);
 
     this.queuer = new Queuer();
-    this.queuer.init(hydra.getClonedRedisClient(), 3);
+    let queuerDB = config.hydra.queuerDB ? config.hydra.queuerDB : 0;
+    this.queuer.init(hydra.getClonedRedisClient(), queuerDB);
 
     this.routerTable = routesObj;
     this._refreshRoutes();
