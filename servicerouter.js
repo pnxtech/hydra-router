@@ -2,17 +2,17 @@
 
 const Promise = require('bluebird');
 const hydra = require('hydra');
-const ServerResponse = require('fwsp-server-response');
+const UMFMessage = hydra.getUMFMessageHelper();
+const Utils = hydra.getUtilsHelper();
+const ServerResponse = hydra.getServerResponseHelper();
 const serverResponse = new ServerResponse;
-const Utils = require('fwsp-jsutils');
-const UMFMessage = require('fwsp-umf-message');
+
 const url = require('url');
 const path = require('path');
 const fs = require('fs');
 const querystring = require('querystring');
 const Route = require('route-parser');
 const version = require('./package.json').version;
-const serverRequest = require('request');
 const Queuer = require('./queuer');
 
 const INFO = 'info';
@@ -362,7 +362,9 @@ class ServiceRouter {
       }
 
       let tracer = Utils.shortID();
-      if (this.config.debugLogging) {
+      if (this.config.debugLogging &&
+          (request.url.indexOf('/v1/router') < 0) &&
+          (request.headers['user-agent'] && request.headers['user-agent'].indexOf('ELB-HealthChecker') < 0)) {
         this.log(INFO, {
           tracer: `HR: tracer=${tracer}`,
           url: request.url,
@@ -379,10 +381,12 @@ class ServiceRouter {
       let urlPath = `http://${request.headers['host']}${requestUrl}`;
       let urlData = url.parse(urlPath);
 
-      if (request.headers['referer']) {
-        this.log(INFO, `HR: [${tracer}] Access ${urlPath} via ${request.headers['referer']}`);
-      } else {
-        this.log(INFO, `HR: [${tracer}] Request for ${urlPath}`);
+      if (request.url.indexOf('/v1/router') < 0) {
+        if (request.headers['referer']) {
+          this.log(INFO, `HR: [${tracer}] Access ${urlPath} via ${request.headers['referer']}`);
+        } else {
+          this.log(INFO, `HR: [${tracer}] Request for ${urlPath}`);
+        }
       }
 
       let matchResult = this._matchRoute(urlData);
@@ -479,12 +483,15 @@ class ServiceRouter {
       let message = UMFMessage.createMessage({
         to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
         from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
+        headers: request.headers,
         body: Utils.safeJSONParse(body) || {}
       });
       message.mid = `${message.mid}-${tracer}`;
       if (request.headers['authorization']) {
         message.authorization = request.headers['authorization'];
+        message.headers['authorization'] = message.authorization;
       }
+      message.headers['x-hydra-tracer'] = tracer;
       hydra.makeAPIRequest(message.toJSON())
         .then((data) => {
           this.log(INFO, `HR: [${tracer}] ${matchResult.serviceName} responded with ${Utils.safeJSONStringify(data)}`);
@@ -524,96 +531,41 @@ class ServiceRouter {
   * @return {undefined}
   */
   _handleHTTPGetOrDeleteRequest(tracer, matchResult, requestUrl, request, response, resolve, _reject) {
-    // if request isn't a JSON request then locate an service instance and passthrough the request in plain HTTP
-    if (request.headers['content-type'] !== 'application/json') {
-      hydra.getServicePresence(matchResult.serviceName)
-        .then((presenceInfo) => {
-          if (presenceInfo.length > 0) {
-            let idx = Math.floor(Math.random() * presenceInfo.length);
-            let presence = presenceInfo[idx];
-
-            let segs = requestUrl.split('/');
-            if (segs[1] === matchResult.serviceName) {
-              requestUrl = '';
-            }
-
-            let url = `http://${presence.ip}:${presence.port}${requestUrl}`;
-            let options = {
-              uri: url,
-              method: request.method,
-              headers: request.headers
-            };
-            options.headers['X-Hydra-Tracer'] = tracer;
-            response.writeHead(ServerResponse.HTTP_OK, {
-              'X-Hydra-Tracer': tracer
-            });
-            this.log(INFO, `HR: [${tracer}] Request ${Utils.safeJSONStringify(options)}`);
-            serverRequest(options, (error, _response, _body) => {
-              if (error) {
-                if (error.code === 'ECONNREFUSED') {
-                  // caller is no longer available.
-                  this.log(FATAL, `HR: [${tracer}] ECONNREFUSED at ${url} - no longer available?`);
-                }
-              }
-            }).pipe(response);
-          } else {
-            let msg = `HR: [${tracer}] Unavailable ${matchResult.serviceName} instances`;
-            serverResponse.sendResponse(ServerResponse.HTTP_SERVICE_UNAVAILABLE, response, {
-              result: {
-                reason: msg
-              },
-              tracer
-            });
-            this.log(FATAL, msg);
-          }
-        });
-      return;
-    }
-
-    // this is a JSON request, package should contain a UMF message.
     let message = {
       to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
       from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
+      headers: request.headers,
       body: {}
     };
     if (request.headers['authorization']) {
       message.authorization = request.headers['authorization'];
     }
+    message.headers['x-hydra-tracer'] = tracer;
     let msg = UMFMessage.createMessage(message).toJSON();
     msg.mid = `${msg.mid}-${tracer}`;
     this.log(INFO, `HR: [${tracer}] Calling remote service ${Utils.safeJSONStringify(msg)}`);
     hydra.makeAPIRequest(msg)
       .then((data) => {
         if (data.headers) {
-          let headers = {
+          let headers = Object.assign({
             'Content-Type': data.headers['content-type'],
             'Content-Length': data.headers['content-length'],
-            'X-Hydra-Tracer': tracer
-          };
+            'x-hydra-tracer': tracer
+          }, data.headers);
           response.writeHead(ServerResponse.HTTP_OK, headers);
           response.write(data.body);
           response.end();
-
-          if (data.body) {
-            this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): ${Utils.safeJSONStringify(data.body)}`);
-          }
         } else {
           if (data.statusCode) {
             serverResponse.sendResponse(data.statusCode, response, {
               result: data.result,
               tracer
             });
-            if (data.result) {
-              this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): status(${data.statusCode}): ${Utils.safeJSONStringify(data.result)}`);
-            }
           } else if (data.code) {
             serverResponse.sendResponse(data.code, response, {
               result: {},
               tracer
             });
-            if (data.code) {
-              this.log(INFO, `HR: [${tracer}] Response from service (${msg.to}): status(${data.statusCode}): {}`);
-            }
           } else {
             serverResponse.sendResponse(serverResponse.HTTP_NOT_FOUND, response, {
               result: {},
