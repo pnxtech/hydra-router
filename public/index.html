@@ -101,7 +101,12 @@ class Main extends Component {
   }
 
   getNodeData() {
-    fetch('/v1/router/list/nodes')
+    let tokenUrlSuffix = '';
+    const token = new RegExp("token=([^&]*)", "i").exec(window.location.search);
+    if (token !== null)  {
+      tokenUrlSuffix = '?token=' + token[1];
+    }
+    fetch('/v1/router/list/nodes'+tokenUrlSuffix)
       .then((res) => {
         return res.json();
       })
