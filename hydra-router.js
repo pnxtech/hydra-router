@@ -18,167 +18,113 @@ let routeList = [
 
 let appLogger;
 
-let config = require('fwsp-config');
-config.init('./config/config.json')
+const http = require('http');
+const hydra = require('hydra');
+const serviceRouter = require('./servicerouter');
+const WebSocketServer = require('ws').Server;
+
+const HydraLogger = require('fwsp-logger').HydraLogger;
+let hydraLogger = new HydraLogger();
+hydra.use(hydraLogger);
+
+let config = {};
+
+/**
+* Initialize hydra for use by Service Router.
+*/
+hydra.init(`${__dirname}/config/config.json`, false)
+  .then((newConfig) => {
+    config = newConfig;
+    return hydra.registerService();
+  })
+  .then((serviceInfo) => {
+    let logEntry = `Starting hydra-router service ${serviceInfo.serviceName}:${hydra.getInstanceVersion()} on ${serviceInfo.serviceIP}:${serviceInfo.servicePort}`;
+    console.log(logEntry);
+    hydra.sendToHealthLog('info', logEntry);
+
+    appLogger = hydraLogger.getLogger();
+    appLogger.info({
+      msg: logEntry
+    });
+
+    hydra.on('log', (entry) => {
+      console.log('logentry', entry);
+      appLogger[entry.type](entry);
+    });
+
+    process.on('cleanup', () => {
+      hydra.shutdown();
+      process.exit(0);
+    });
+    process.on('SIGTERM', () => {
+      appLogger.fatal('Received SIGTERM');
+      process.emit('cleanup');
+    });
+    process.on('SIGINT', () => {
+      appLogger.fatal('Received SIGINT');
+      process.emit('cleanup');
+    });
+    process.on('unhandledRejection', (reason, _p) => {
+      appLogger.fatal(reason);
+      process.emit('cleanup');
+    });
+    process.on('uncaughtException', (err) => {
+      let stack = err.stack;
+      delete err.__cached_trace__;
+      delete err.__previous__;
+      delete err.domain;
+      appLogger.fatal({
+        stack
+      });
+      process.emit('cleanup');
+    });
+
+    /**
+    * @summary Start HTTP server and add request handler callback.
+    * @param {object} request - Node HTTP request object
+    * @param {object} response - Node HTTP response object
+    */
+    let server = http.createServer((request, response) => {
+      serviceRouter.routeRequest(request, response);
+    });
+    server.listen(serviceInfo.servicePort);
+
+    /**
+    * Setup websocket message handler.
+    */
+    let wss = new WebSocketServer({server: server});
+    wss.on('connection', (ws) => {
+      serviceRouter.sendConnectMessage(ws);
+
+      ws.on('message', (message) => {
+        serviceRouter.routeWSMessage(ws, message);
+      });
+
+      ws.on('close', () => {
+        serviceRouter.wsDisconnect(ws);
+      });
+    });
+
+    /**
+    * Register routes.
+    */
+    return hydra.registerRoutes(routeList);
+  })
   .then(() => {
-    if (config.risingStack) {
-      require('@risingstack/trace');
-    }
-    const http = require('http');
-    const cluster = require('cluster');
-    const os = require('os');
-    const hydra = require('hydra');
-    const version = require('./package.json').version;
-    const serviceRouter = require('./servicerouter');
-    const WebSocketServer = require('ws').Server;
-    config.version = version;
-    config.hydra.serviceVersion = version;
-
-    const HydraLogger = require('fwsp-logger').HydraLogger;
-    let hydraLogger = new HydraLogger();
-    hydra.use(hydraLogger);
-
     /**
-    * Handling for process invocation as a process master or child process.
+    * Retrieve routes for all registered services.
     */
-    if (config.cluster !== true) {
-      initWorker();
-    } else {
-      if (cluster.isMaster) {
-        const numWorkers = config.processes || os.cpus().length;
-        console.log(`${config.hydra.serviceName} (v.${config.version})`);
-        console.log(`Using environment: ${config.environment}`);
-        console.log('info', `Master cluster setting up ${numWorkers} workers...`);
-
-        for (let i = 0; i < numWorkers; i++) {
-          cluster.fork();
-        }
-
-        /**
-         * @param {object} worker - worker process object
-         */
-        cluster.on('online', (worker) => {
-          console.log(`Worker ${worker.process.pid} is online`);
-        });
-
-        /**
-         * @param {object} worker - worker process object
-         * @param {number} code - process exit code
-         * @param {number} signal - signal that caused the process shutdown
-         */
-        cluster.on('exit', (worker, code, signal) => {
-          console.log(`Worker ${worker.process.pid} died with code ${code}, and signal: ${signal}`);
-          console.log('Starting a new worker');
-          cluster.fork();
-        });
-      } else {
-        initWorker();
-      }
-    }
-
+    return hydra.getAllServiceRoutes();
+  })
+  .then((routesObj) => {
     /**
-    * @name initWorker
-    * @summary Initialize the core process functionality.
-    * @return {undefined}  -
+    * Initialize service router using routes object.
     */
-    function initWorker() {
-      /**
-      * Initialize hydra for use by Service Router.
-      */
-      hydra.init(config)
-        .then((newConfig) => {
-          config = newConfig;
-          return hydra.registerService();
-        })
-        .then((serviceInfo) => {
-          let logEntry = `Starting hydra-router service ${serviceInfo.serviceName} on ${serviceInfo.serviceIP}:${serviceInfo.servicePort}`;
-          hydra.sendToHealthLog('info', logEntry);
-
-          appLogger = hydraLogger.getLogger();
-          appLogger.info({
-            msg: logEntry
-          });
-
-          hydra.on('log', (entry) => {
-            console.log('logentry', entry);
-            appLogger[entry.type](entry);
-          });
-
-          process.on('cleanup', () => {
-            hydra.shutdown();
-            process.exit(0);
-          });
-          process.on('SIGTERM', () => {
-            appLogger.fatal('Received SIGTERM');
-            process.emit('cleanup');
-          });
-          process.on('SIGINT', () => {
-            appLogger.fatal('Received SIGINT');
-            process.emit('cleanup');
-          });
-          process.on('unhandledRejection', (reason, _p) => {
-            appLogger.fatal(reason);
-            process.emit('cleanup');
-          });
-          process.on('uncaughtException', (err) => {
-            let stack = err.stack;
-            delete err.__cached_trace__;
-            delete err.__previous__;
-            delete err.domain;
-            appLogger.fatal({
-              stack
-            });
-            process.emit('cleanup');
-          });
-
-          /**
-          * @summary Start HTTP server and add request handler callback.
-          * @param {object} request - Node HTTP request object
-          * @param {object} response - Node HTTP response object
-          */
-          let server = http.createServer((request, response) => {
-            serviceRouter.routeRequest(request, response);
-          });
-          server.listen(serviceInfo.servicePort);
-
-          /**
-          * Setup websocket message handler.
-          */
-          let wss = new WebSocketServer({server: server});
-          wss.on('connection', (ws) => {
-            serviceRouter.sendConnectMessage(ws);
-
-            ws.on('message', (message) => {
-              serviceRouter.routeWSMessage(ws, message);
-            });
-
-            ws.on('close', () => {
-              serviceRouter.wsDisconnect(ws);
-            });
-          });
-
-          /**
-          * Register routes.
-          */
-          return hydra.registerRoutes(routeList);
-        })
-        .then(() => {
-          /**
-          * Retrieve routes for all registered services.
-          */
-          return hydra.getAllServiceRoutes();
-        })
-        .then((routesObj) => {
-          /**
-          * Initialize service router using routes object.
-          */
-          routesObj = Object.assign(routesObj, config.externalRoutes);
-          serviceRouter.init(config, routesObj, appLogger);
-          return null; // to silence promise warning: http://goo.gl/rRqMUw
-        })
-        .catch((err) => {
-          console.log(err);
-          process.exit(-1);
-        });
-    }
+    routesObj = Object.assign(routesObj, config.externalRoutes);
+    serviceRouter.init(config, routesObj, appLogger);
+    return null; // to silence promise warning: http://goo.gl/rRqMUw
+  })
+  .catch((err) => {
+    console.log(err);
+    process.exit(-1);
   });

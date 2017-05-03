@@ -1,10 +1,7 @@
 {
-  "cluster": false,
-  "processes": 0,
   "externalRoutes": {},
   "routerToken": "",
   "disableRouterEndpoint": false,
-  "risingStack": false,
   "debugLogging": false,
   "queuerDB": 0,
   "hydra": {
