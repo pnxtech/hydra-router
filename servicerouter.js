@@ -606,8 +606,11 @@ class ServiceRouter {
       let qs = querystring.parse(urlData.query);
       if (qs.token) {
         allowRouterCall = (Utils.isUUID4(qs.token) && qs.token === this.config.routerToken);
+      } else {
+        allowRouterCall = false;
       }
     }
+
     if (!allowRouterCall) {
       serverResponse.sendResponse(ServerResponse.HTTP_NOT_FOUND, response);
       return;
