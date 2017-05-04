@@ -11,6 +11,7 @@ let routeList = [
   '[get]/',
   '[get]/v1/router/list/:thing',
   '[get]/v1/router/version',
+  '[get]/v1/router/clear',
   '[get]/v1/router/refresh',
   '[get]/v1/router/refresh/:service',
   '[post]/v1/router/message'
