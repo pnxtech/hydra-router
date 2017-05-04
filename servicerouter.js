@@ -637,6 +637,8 @@ class ServiceRouter {
       } else {
         serverResponse.sendNotFound(response);
       }
+    } else if (matchResult.pattern.indexOf('/v1/router/clear') > -1) {
+      this._clearServices(response);
     } else if (matchResult.pattern.indexOf('/v1/router/refresh') > -1) {
       this._refreshRoutes(matchResult.params.service);
       serverResponse.sendOk(response);
@@ -806,6 +808,44 @@ class ServiceRouter {
           });
         });
     });
+  }
+
+  /**
+  * @name _clearServices
+  * @summary Remove dead serices to clear the dashboard
+  * @param {object} response - HTTP response objecxt
+  * @return {undefined}
+  */
+  _clearServices(response) {
+    let redirect = () => {
+      const HTTP_FOUND = 302; // HTTP redirect
+      response.writeHead(HTTP_FOUND, {
+        'Location': '/'
+      });
+      response.end();
+    };
+    const FIVE_SECONDS = 5;
+    hydra.getServiceNodes()
+      .then((nodes) => {
+        let ids = [];
+        nodes.forEach((node) => {
+          if (node.elapsed > FIVE_SECONDS) {
+            ids.push(node.instanceID);
+          }
+        });
+        if (ids.length) {
+          let redisClient = hydra.getClonedRedisClient();
+          redisClient.hdel('hydra:service:nodes', ids, (_err, _result) => {
+            redirect();
+          });
+          redisClient.quit();
+        } else {
+          redirect();
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   }
 
   /**
