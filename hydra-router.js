@@ -53,6 +53,10 @@ hydra.init(`${__dirname}/config/config.json`, false)
       appLogger[entry.type](entry);
     });
 
+    hydra.on('metric', (entry) => {
+      console.log('entry', entry);
+    });
+
     process.on('cleanup', () => {
       hydra.shutdown();
       process.exit(0);

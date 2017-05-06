@@ -41,8 +41,8 @@ class ServiceRouter {
 
   /*
   * @name init
-  * @summary Initialize the service router using a route object.
-  * @param {object} config - configuration
+  * @summary Initialize the service router using a route object
+  * @param {object} config - configuration object
   * @param {object} routesObj - routes object
   * @param {object} appLogger - logging object
   * @return {undefined}
@@ -355,7 +355,7 @@ class ServiceRouter {
   * @return {object} Promise - promise resolving if success or rejection otherwise
   */
   routeRequest(request, response) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _reject) => {
       if (request.method === 'OPTIONS') {
         this._handleCORSReqest(request, response);
         return;
@@ -434,11 +434,88 @@ class ServiceRouter {
       }
 
       if (request.method === 'POST' || request.method === 'PUT') {
-        this._handleHTTPPutOrPostRequest(tracer, matchResult, requestUrl, request, response, resolve, reject);
+        let body = '';
+        request.on('data', (data) => {
+          body += data;
+        });
+        request.on('end', () => {
+          this._processHTTPRequest(tracer, body, matchResult.serviceName, requestUrl, request, response, resolve);
+        });
       } else {
-        this._handleHTTPGetOrDeleteRequest(tracer, matchResult, requestUrl, request, response, resolve, reject);
+        this._processHTTPRequest(tracer, null, matchResult.serviceName, requestUrl, request, response, resolve);
       }
     });
+  }
+
+  /**
+  * @name _processHTTPRequest
+  * @summary Process HTTP requests
+  * @param {string} tracer - tag to mark HTTP call
+  * @param {object} body - Body for POST and PUT calls
+  * @param {string} serviceName - name of target service
+  * @param {string} requestUrl - request url
+  * @param {object} request - Node HTTP request object
+  * @param {object} response - Node HTTP response object
+  * @param {function} resolve - promise resolve handler
+  * @return {undefined}
+  */
+  _processHTTPRequest(tracer, body, serviceName, requestUrl, request, response, resolve) {
+    let message = {
+      to: `${serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
+      from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
+      headers: request.headers,
+      body: Utils.safeJSONParse(body) || {}
+    };
+    if (request.headers['authorization']) {
+      message.authorization = request.headers['authorization'];
+    }
+    message.headers['x-hydra-tracer'] = tracer;
+    let msg = UMFMessage.createMessage(message).toJSON();
+    msg.mid = `${msg.mid}-${tracer}`;
+    this.log(INFO, `HR: [${tracer}] Calling remote service ${Utils.safeJSONStringify(msg)}`);
+
+    hydra.makeAPIRequest(msg)
+      .then((data) => {
+        if (data.headers) {
+          let headers = Object.assign({
+            'x-hydra-tracer': tracer
+          }, data.headers);
+          let ct = headers['content-type'];
+          if (ct && ct.indexOf('json') > -1) {
+            delete data.headers;
+            data = Object.assign(data, Utils.safeJSONParse(data.payLoad));
+            delete data.payLoad;
+            let newPayLoad = Utils.safeJSONStringify(data);
+            headers['content-length'] = newPayLoad.length;
+            response.writeHead(data.statusCode, headers);
+            response.write(newPayLoad);
+          } else {
+            response.writeHead(data.statusCode, headers);
+            response.write(data.payLoad);
+          }
+          response.end();
+        } else {
+          serverResponse.sendResponse(data.statusCode, response, {
+            result: {
+              reason: data.result.reason
+            },
+            tracer
+          });
+        }
+        resolve();
+      })
+      .catch((err) => {
+        this.log(FATAL, `HR: [${tracer}] ${err.message}`);
+        this.log(FATAL, err);
+        let msg = err.result.reason;
+        serverResponse.sendResponse(err.statusCode, response, {
+          result: {
+            reason: msg
+          },
+          tracer
+        });
+        resolve();
+      });
   }
 
   /**
@@ -459,135 +536,6 @@ class ServiceRouter {
       'Content-Type': 'application/json'
     });
     response.end();
-  }
-
-
-  /**
-  * @name _handleHTTPPutOrPostRequest
-  * @summary Handle HTTP PUT and POST requests
-  * @param {string} tracer - tag to mark HTTP call
-  * @param {object} matchResult - router match results object
-  * @param {string} requestUrl - request url
-  * @param {object} request - Node HTTP request object
-  * @param {object} response - Node HTTP response object
-  * @param {function} resolve - promise resolve handler
-  * @param {function} _reject - promise reject handler
-  * @return {undefined}
-  */
-  _handleHTTPPutOrPostRequest(tracer, matchResult, requestUrl, request, response, resolve, _reject) {
-    let body = '';
-    request.on('data', (data) => {
-      body += data;
-    });
-    request.on('end', () => {
-      let message = UMFMessage.createMessage({
-        to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
-        from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
-        headers: request.headers,
-        body: Utils.safeJSONParse(body) || {}
-      });
-      message.mid = `${message.mid}-${tracer}`;
-      if (request.headers['authorization']) {
-        message.authorization = request.headers['authorization'];
-        message.headers['authorization'] = message.authorization;
-      }
-      message.headers['x-hydra-tracer'] = tracer;
-      hydra.makeAPIRequest(message.toJSON())
-        .then((data) => {
-          this.log(INFO, `HR: [${tracer}] ${matchResult.serviceName} responded with ${Utils.safeJSONStringify(data)}`);
-          serverResponse.sendResponse(data.statusCode, response, data);
-          resolve();
-        })
-        .catch((err) => {
-          this.log(FATAL, `HR: [${tracer}] ${err.message}`);
-          this.log(FATAL, err);
-          let reason;
-          if (err.result && err.result.reason) {
-            reason = err.result.reason;
-          } else {
-            reason = err.message;
-          }
-          serverResponse.sendResponse(err.statusCode, response, {
-            result: {
-              reason
-            },
-            tracer
-          });
-          resolve();
-        });
-    });
-  }
-
-  /**
-  * @name _handleHTTPGetOrDeleteRequest
-  * @summary Handle HTTP GET and DELETE requests
-  * @param {string} tracer - tag to mark HTTP call
-  * @param {object} matchResult - router match results object
-  * @param {string} requestUrl - request url
-  * @param {object} request - Node HTTP request object
-  * @param {object} response - Node HTTP response object
-  * @param {function} resolve - promise resolve handler
-  * @param {function} _reject - promise reject handler
-  * @return {undefined}
-  */
-  _handleHTTPGetOrDeleteRequest(tracer, matchResult, requestUrl, request, response, resolve, _reject) {
-    let message = {
-      to: `${matchResult.serviceName}:[${request.method.toLowerCase()}]${requestUrl}`,
-      from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
-      headers: request.headers,
-      body: {}
-    };
-    if (request.headers['authorization']) {
-      message.authorization = request.headers['authorization'];
-    }
-    message.headers['x-hydra-tracer'] = tracer;
-    let msg = UMFMessage.createMessage(message).toJSON();
-    msg.mid = `${msg.mid}-${tracer}`;
-    this.log(INFO, `HR: [${tracer}] Calling remote service ${Utils.safeJSONStringify(msg)}`);
-    hydra.makeAPIRequest(msg)
-      .then((data) => {
-        if (data.headers) {
-          let headers = Object.assign({
-            'Content-Type': data.headers['content-type'],
-            'Content-Length': data.headers['content-length'],
-            'x-hydra-tracer': tracer
-          }, data.headers);
-          response.writeHead(ServerResponse.HTTP_OK, headers);
-          response.write(data.body);
-          response.end();
-        } else {
-          if (data.statusCode) {
-            serverResponse.sendResponse(data.statusCode, response, {
-              result: data.result,
-              tracer
-            });
-          } else if (data.code) {
-            serverResponse.sendResponse(data.code, response, {
-              result: {},
-              tracer
-            });
-          } else {
-            serverResponse.sendResponse(serverResponse.HTTP_NOT_FOUND, response, {
-              result: {},
-              tracer
-            });
-            this.log(ERROR, `HR: [${tracer}] Response from service (${msg.to}): status(HTTP_NOT_FOUND): {}`);
-          }
-        }
-        resolve();
-      })
-      .catch((err) => {
-        this.log(FATAL, `HR: [${tracer}] ${err.message}`);
-        this.log(FATAL, err);
-        let msg = err.result.reason;
-        serverResponse.sendResponse(err.statusCode, response, {
-          result: {
-            reason: msg
-          },
-          tracer
-        });
-        resolve();
-      });
   }
 
   /**
