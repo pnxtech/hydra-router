@@ -14,6 +14,7 @@ let routeList = [
   '[get]/v1/router/clear',
   '[get]/v1/router/refresh',
   '[get]/v1/router/refresh/:service',
+  '[get]/v1/router/stats',
   '[post]/v1/router/message'
 ];
 
@@ -49,12 +50,12 @@ hydra.init(`${__dirname}/config/config.json`, false)
     });
 
     hydra.on('log', (entry) => {
-      console.log('logentry', entry);
-      appLogger[entry.type](entry);
+      serviceRouter.log(entry.type, entry);
     });
 
     hydra.on('metric', (entry) => {
-      console.log('entry', entry);
+      let type = (entry.indexOf('unavailable') > -1) ? 'error' : 'info';
+      serviceRouter.log(type, entry);
     });
 
     process.on('cleanup', () => {
