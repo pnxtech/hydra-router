@@ -35,6 +35,7 @@ class ServiceRouter {
     this.routerTable = null;
     this.serviceNames = {};
     this.appLogger = null;
+    this.issueLog = [];
     serverResponse.enableCORS(true);
     this._handleIncomingChannelMessage = this._handleIncomingChannelMessage.bind(this);
   }
@@ -85,11 +86,17 @@ class ServiceRouter {
   * @return {undefined}
   */
   log(type, message) {
+    console.log('hello from log!');
     if (type === ERROR || type === FATAL) {
       this.appLogger[type](message);
     } else if (this.config.debugLogging) {
       this.appLogger[type](message);
     }
+    this.issueLog.push({
+      ts: new Date().toISOString(),
+      type,
+      entry: message
+    });
   }
 
   /**
@@ -592,6 +599,8 @@ class ServiceRouter {
       serverResponse.sendOk(response);
     } else if (matchResult.pattern.indexOf('/v1/router/version') > -1) {
       this._handleRouteVersion(response);
+    } else if (matchResult.pattern.indexOf('/v1/router/stats') > -1) {
+      this._handleRouteStats(response);
     } else if (matchResult.pattern.indexOf('/v1/router/message') > -1) {
       this._handleMessage(request, response);
     } else {
@@ -611,6 +620,21 @@ class ServiceRouter {
     serverResponse.sendOk(response, {
       result: {
         version
+      }
+    });
+  }
+
+  /**
+  * @name _handleRouteStats
+  * @summary Handle stats routes requests. /v1/router/stats
+  * @private
+  * @param {object} response - Node HTTP response object
+  * @return {undefined}
+  */
+  _handleRouteStats(response) {
+    serverResponse.sendOk(response, {
+      result: {
+        logs: this.issueLog
       }
     });
   }
