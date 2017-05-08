@@ -492,7 +492,7 @@ class ServiceRouter {
             data = Object.assign(data, Utils.safeJSONParse(data.payLoad));
             delete data.payLoad;
             let newPayLoad = Utils.safeJSONStringify(data);
-            headers['content-length'] = Buffer.byteLength(newPayLoad)
+            headers['content-length'] = Buffer.byteLength(newPayLoad);
             response.writeHead(data.statusCode, headers);
             response.write(newPayLoad);
           } else {
