@@ -86,7 +86,6 @@ class ServiceRouter {
   * @return {undefined}
   */
   log(type, message) {
-    console.log('hello from log!');
     if (type === ERROR || type === FATAL) {
       this.appLogger[type](message);
     } else if (this.config.debugLogging) {
@@ -493,7 +492,7 @@ class ServiceRouter {
             data = Object.assign(data, Utils.safeJSONParse(data.payLoad));
             delete data.payLoad;
             let newPayLoad = Utils.safeJSONStringify(data);
-            headers['content-length'] = newPayLoad.length;
+            headers['content-length'] = Buffer.byteLength(newPayLoad);
             response.writeHead(data.statusCode, headers);
             response.write(newPayLoad);
           } else {
