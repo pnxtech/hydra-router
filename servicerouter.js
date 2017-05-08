@@ -86,7 +86,6 @@ class ServiceRouter {
   * @return {undefined}
   */
   log(type, message) {
-    console.log('hello from log!');
     if (type === ERROR || type === FATAL) {
       this.appLogger[type](message);
     } else if (this.config.debugLogging) {
