@@ -18,7 +18,6 @@ let routeList = [
   '[post]/v1/router/message'
 ];
 
-let appLogger;
 
 const http = require('http');
 const hydra = require('hydra');
@@ -28,6 +27,7 @@ const WebSocketServer = require('ws').Server;
 const HydraLogger = require('fwsp-logger').HydraLogger;
 let hydraLogger = new HydraLogger();
 hydra.use(hydraLogger);
+let appLogger;
 
 let config = {};
 

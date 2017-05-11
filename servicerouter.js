@@ -113,7 +113,7 @@ class ServiceRouter {
   /**
   * @name _handleIncomingChannelMessage
   * @summary Handle incoming UMF messages from other services
-  * @param {object} msg - UMF formated message
+  * @param {object} msg - UMF formatted message
   * @return {undefined}
   */
   _handleIncomingChannelMessage(msg) {
@@ -142,7 +142,7 @@ class ServiceRouter {
 
   /**
   * @name wsRouteThroughHttp
-  * @summary Route websocket request throuigh HTTP
+  * @summary Route websocket request through HTTP
   * @param {object} ws - websocket
   * @param {object} message - UMF message
   * @return {undefined}
@@ -533,7 +533,6 @@ class ServiceRouter {
   */
   _handleCORSReqest(request, response) {
     // Handle CORS preflight
-    // allow-headers below are in lowercase per: https://nodejs.org/api/http.html#http_message_headers
     response.writeHead(ServerResponse.HTTP_OK, {
       'access-control-allow-origin': '*',
       'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -783,8 +782,8 @@ class ServiceRouter {
 
   /**
   * @name _clearServices
-  * @summary Remove dead serices to clear the dashboard
-  * @param {object} response - HTTP response objecxt
+  * @summary Remove dead services to clear the dashboard
+  * @param {object} response - HTTP response object
   * @return {undefined}
   */
   _clearServices(response) {
