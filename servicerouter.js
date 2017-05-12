@@ -1,5 +1,9 @@
 'use strict';
 
+if (process.env.NEW_RELIC_LICENSE_KEY) {
+  require('newrelic');
+}
+
 const Promise = require('bluebird');
 const hydra = require('hydra');
 const UMFMessage = hydra.getUMFMessageHelper();
