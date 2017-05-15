@@ -23,6 +23,8 @@ const INFO = 'info';
 const ERROR = 'error';
 const FATAL = 'fatal';
 const FIVE_SECONDS = 5;
+const MAX_ISSUE_LOG_ENTRIES = 100;
+const ISSUE_LOG_CLEANUP_DELAY = 30000; // thirty seconds
 
 let wsClients = {};
 
@@ -41,6 +43,7 @@ class ServiceRouter {
     this.serviceNames = {};
     this.appLogger = null;
     this.issueLog = [];
+    this.issueLogCleanupScheduled = false;
     serverResponse.enableCORS(true);
     this._handleIncomingChannelMessage = this._handleIncomingChannelMessage.bind(this);
   }
@@ -102,6 +105,14 @@ class ServiceRouter {
       type,
       entry: message
     });
+    let len = this.issueLog.length;
+    if (len > MAX_ISSUE_LOG_ENTRIES && !this.issueLogCleanupScheduled) {
+      this.issueLogCleanupScheduled = true;
+      setTimeout(() => {
+        this.issueLog.splice(0, len - MAX_ISSUE_LOG_ENTRIES);
+        this.issueLogCleanupScheduled = false;
+      }, ISSUE_LOG_CLEANUP_DELAY);
+    }
   }
 
   /**
