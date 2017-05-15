@@ -1,9 +1,20 @@
 'use strict';
 
 const Promise = require('bluebird');
-const utils = require('fwsp-jsutils');
+const hydra = require('hydra');
+const Utils = hydra.getUtilsHelper();
 
+/**
+* @name Queuer
+* @summary message queuer
+* @return {undefined}
+*/
 class Queuer {
+  /**
+  * @name constructor
+  * @summary class constructor
+  * @return {undefined}
+  */
   constructor() {
     this.config = null;
     this.db = null;
@@ -15,11 +26,12 @@ class Queuer {
   * @param {object} redisclient - cloned redis client
   * @param {number} dbNum - redis database number
   * @return {promise} promise - returns a promise
+  * @return {undefined}
   */
   init(redisclient, dbNum) {
     this.db = redisclient;
     return new Promise((resolve, reject) => {
-      this.db.select(dbNum, (err, reply) => {
+      this.db.select(dbNum, (err, _reply) => {
         (err) ? reject(err) : resolve(this.db);
       });
     });
@@ -28,6 +40,7 @@ class Queuer {
   /**
   * @name close
   * @summary close Redis db
+  * @return {undefined}
   */
   close() {
     this.db.quit();
@@ -43,7 +56,7 @@ class Queuer {
   */
   enqueue(queueName, obj) {
     return new Promise((resolve, reject) => {
-      let js = utils.safeJSONStringify(obj);
+      let js = Utils.safeJSONStringify(obj);
       if (!js) {
         reject(new Error('unable to stringify object'));
         return;
@@ -70,7 +83,7 @@ class Queuer {
         if (err) {
           reject(err);
         } else {
-          resolve(utils.safeJSONParse(data));
+          resolve(Utils.safeJSONParse(data));
         }
       });
     });
@@ -85,11 +98,11 @@ class Queuer {
   */
   complete(queueName, obj) {
     return new Promise((resolve, reject) => {
-      this.db.lrem(`${queueName}:processing`, -1, utils.safeJSONStringify(obj), (err, data) => {
+      this.db.lrem(`${queueName}:processing`, -1, Utils.safeJSONStringify(obj), (err, data) => {
         if (err) {
           reject(err);
         } else {
-          resolve(utils.safeJSONParse(data));
+          resolve(Utils.safeJSONParse(data));
         }
       });
     });
