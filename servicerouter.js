@@ -22,6 +22,7 @@ const Queuer = require('./queuer');
 const INFO = 'info';
 const ERROR = 'error';
 const FATAL = 'fatal';
+const FIVE_SECONDS = 5;
 
 let wsClients = {};
 
@@ -54,6 +55,7 @@ class ServiceRouter {
   */
   init(config, routesObj, appLogger) {
     this.config = config;
+    this.requestTimeout = this.config.requestTimeout || FIVE_SECONDS;
     this.serviceName = hydra.getServiceName();
     this.appLogger = appLogger;
     Object.keys(routesObj).forEach((serviceName) => {
@@ -160,7 +162,7 @@ class ServiceRouter {
       body: {}
     });
 
-    hydra.makeAPIRequest(longMessage.toJSON())
+    hydra.makeAPIRequest(longMessage.toJSON(), {timeout: this.requestTimeout})
       .then((data) => {
         replyMessage.body = {
           result: data.result
@@ -484,7 +486,7 @@ class ServiceRouter {
     msg.mid = `${msg.mid}-${tracer}`;
     this.log(INFO, `HR: [${tracer}] Calling remote service ${Utils.safeJSONStringify(msg)}`);
 
-    hydra.makeAPIRequest(msg)
+    hydra.makeAPIRequest(msg, {timeout: this.requestTimeout})
       .then((data) => {
         if (data.headers) {
           let headers = Object.assign({
@@ -766,7 +768,7 @@ class ServiceRouter {
         from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
         body: umf.body
       });
-      hydra.makeAPIRequest(forwardMessage.toJSON())
+      hydra.makeAPIRequest(forwardMessage.toJSON(), {timeout: this.requestTimeout})
         .then((data) => {
           serverResponse.sendResponse(data.statusCode, response, {
             result: data.result

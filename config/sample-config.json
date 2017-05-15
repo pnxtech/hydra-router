@@ -4,6 +4,7 @@
   "disableRouterEndpoint": false,
   "debugLogging": false,
   "queuerDB": 0,
+  "requestTimeout": 5,
   "hydra": {
     "serviceName": "hydra-router",
     "serviceDescription": "Service Router",
