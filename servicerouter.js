@@ -804,7 +804,7 @@ class ServiceRouter {
   */
   _clearServices(response) {
     let redirect = () => {
-      const HTTP_FOUND = 302; // HTTP redirect
+      const HTTP_FOUND = ServerResponse.HTTP_FOUND; // HTTP redirect
       response.writeHead(HTTP_FOUND, {
         'Location': '/'
       });
