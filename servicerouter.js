@@ -25,6 +25,7 @@ const FATAL = 'fatal';
 const FIVE_SECONDS = 5;
 const MAX_ISSUE_LOG_ENTRIES = 100;
 const ISSUE_LOG_CLEANUP_DELAY = 30000; // thirty seconds
+const MAX_SERVICE_LOG_LENGTH = 3;
 
 /**
 * @name ServiceRouter
@@ -43,8 +44,8 @@ class ServiceRouter {
     this.appLogger = null;
     this.issueLog = [];
     this.issueLogCleanupScheduled = false;
-    serverResponse.enableCORS(true);
     this._handleIncomingChannelMessage = this._handleIncomingChannelMessage.bind(this);
+    serverResponse.enableCORS(true);
   }
 
   /**
@@ -704,8 +705,8 @@ class ServiceRouter {
               findItemData(service, 'health', instanceID)
             );
             if (service.log) {
-              if (service.log.length > 3) {
-                service.log.length = 3;
+              if (service.log.length > MAX_SERVICE_LOG_LENGTH) {
+                service.log.length = MAX_SERVICE_LOG_LENGTH;
               }
               serviceInstanceData.log = service.log;
             }
