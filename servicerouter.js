@@ -48,7 +48,7 @@ class ServiceRouter {
     this._handleIncomingChannelMessage = this._handleIncomingChannelMessage.bind(this);
   }
 
-  /*
+  /**
   * @name init
   * @summary Initialize the service router using a route object
   * @param {object} config - configuration object
