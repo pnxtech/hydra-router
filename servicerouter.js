@@ -26,8 +26,6 @@ const FIVE_SECONDS = 5;
 const MAX_ISSUE_LOG_ENTRIES = 100;
 const ISSUE_LOG_CLEANUP_DELAY = 30000; // thirty seconds
 
-let wsClients = {};
-
 /**
 * @name ServiceRouter
 * @description A module which uses Hydra to route service requests.
@@ -39,6 +37,7 @@ class ServiceRouter {
   */
   constructor() {
     this.config = null;
+    this.wsClients = {};
     this.routerTable = null;
     this.serviceNames = {};
     this.appLogger = null;
@@ -144,7 +143,7 @@ class ServiceRouter {
     if (message.via) {
       let viaRoute = UMFMessage.parseRoute(message.via);
       if (viaRoute.subID) {
-        let ws = wsClients[viaRoute.subID];
+        let ws = this.wsClients[viaRoute.subID];
         if (ws) {
           delete msg.via;
           this._sendWSMessage(ws, msg);
@@ -206,8 +205,8 @@ class ServiceRouter {
   */
   sendConnectMessage(ws, id) {
     ws.id = id || Utils.shortID();
-    if (!wsClients[ws.id]) {
-      wsClients[ws.id] = ws;
+    if (!this.wsClients[ws.id]) {
+      this.wsClients[ws.id] = ws;
     }
     let welcomeMessage = UMFMessage.createMessage({
       to: `${ws.id}@client:/`,
@@ -343,7 +342,7 @@ class ServiceRouter {
   */
   wsDisconnect(ws) {
     ws.close();
-    delete wsClients[ws.id];
+    delete this.wsClients[ws.id];
   }
 
   /**
