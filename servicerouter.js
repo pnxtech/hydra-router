@@ -25,8 +25,7 @@ const FATAL = 'fatal';
 const FIVE_SECONDS = 5;
 const MAX_ISSUE_LOG_ENTRIES = 100;
 const ISSUE_LOG_CLEANUP_DELAY = 30000; // thirty seconds
-
-let wsClients = {};
+const MAX_SERVICE_LOG_LENGTH = 3;
 
 /**
 * @name ServiceRouter
@@ -39,16 +38,17 @@ class ServiceRouter {
   */
   constructor() {
     this.config = null;
+    this.wsClients = {};
     this.routerTable = null;
     this.serviceNames = {};
     this.appLogger = null;
     this.issueLog = [];
     this.issueLogCleanupScheduled = false;
-    serverResponse.enableCORS(true);
     this._handleIncomingChannelMessage = this._handleIncomingChannelMessage.bind(this);
+    serverResponse.enableCORS(true);
   }
 
-  /*
+  /**
   * @name init
   * @summary Initialize the service router using a route object
   * @param {object} config - configuration object
@@ -144,7 +144,7 @@ class ServiceRouter {
     if (message.via) {
       let viaRoute = UMFMessage.parseRoute(message.via);
       if (viaRoute.subID) {
-        let ws = wsClients[viaRoute.subID];
+        let ws = this.wsClients[viaRoute.subID];
         if (ws) {
           delete msg.via;
           this._sendWSMessage(ws, msg);
@@ -206,8 +206,8 @@ class ServiceRouter {
   */
   sendConnectMessage(ws, id) {
     ws.id = id || Utils.shortID();
-    if (!wsClients[ws.id]) {
-      wsClients[ws.id] = ws;
+    if (!this.wsClients[ws.id]) {
+      this.wsClients[ws.id] = ws;
     }
     let welcomeMessage = UMFMessage.createMessage({
       to: `${ws.id}@client:/`,
@@ -343,7 +343,7 @@ class ServiceRouter {
   */
   wsDisconnect(ws) {
     ws.close();
-    delete wsClients[ws.id];
+    delete this.wsClients[ws.id];
   }
 
   /**
@@ -705,8 +705,8 @@ class ServiceRouter {
               findItemData(service, 'health', instanceID)
             );
             if (service.log) {
-              if (service.log.length > 3) {
-                service.log.length = 3;
+              if (service.log.length > MAX_SERVICE_LOG_LENGTH) {
+                service.log.length = MAX_SERVICE_LOG_LENGTH;
               }
               serviceInstanceData.log = service.log;
             }
@@ -805,7 +805,7 @@ class ServiceRouter {
   */
   _clearServices(response) {
     let redirect = () => {
-      const HTTP_FOUND = 302; // HTTP redirect
+      const HTTP_FOUND = ServerResponse.HTTP_FOUND; // HTTP redirect
       response.writeHead(HTTP_FOUND, {
         'Location': '/'
       });
