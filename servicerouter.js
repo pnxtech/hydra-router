@@ -499,6 +499,9 @@ class ServiceRouter {
 
     hydra.makeAPIRequest(msg, {timeout: this.requestTimeout})
       .then((data) => {
+        if (data.statusCode > 499) {
+          this.log(FATAL, `HR: [${tracer}] ${serviceName} reported: HTTP:${data.statusCode}`);
+        }
         if (data.headers) {
           let headers = Object.assign({
             'x-hydra-tracer': tracer
@@ -528,7 +531,7 @@ class ServiceRouter {
         resolve();
       })
       .catch((err) => {
-        this.log(FATAL, `HR: [${tracer}] ${err.message}`);
+        this.log(FATAL, `HR: [${tracer}] ERROR: ${err.message}`);
         this.log(FATAL, err);
         let msg = err.result.reason;
         serverResponse.sendResponse(err.statusCode, response, {
