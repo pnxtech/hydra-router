@@ -1,4 +1,4 @@
-FROM node:7.8.0-alpine
+FROM node:8.0.0-alpine
 MAINTAINER Carlos Justiniano cjus34@gmail.com
 EXPOSE 80
 
