@@ -13,7 +13,9 @@
     "serviceType": "router",
     "plugins": {
       "logger": {
-        "logRequests": true,
+        "logRequests": false,
+        "noFile": true,
+        "toConsole": false,
         "redact": ["password"],
         "elasticsearch": {
           "host": "localhost",
