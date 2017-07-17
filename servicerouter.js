@@ -4,6 +4,7 @@ if (process.env.NEW_RELIC_LICENSE_KEY) {
   require('newrelic');
 }
 
+const debug = require('debug')('hydra-router');
 const Promise = require('bluebird');
 const hydra = require('hydra');
 const UMFMessage = hydra.getUMFMessageHelper();
@@ -95,6 +96,9 @@ class ServiceRouter {
   * @return {undefined}
   */
   log(type, message) {
+    let msg = (typeof message === 'object') ? Utils.safeJSONStringify(message) : message;
+    debug(`${type} ${msg}`);
+
     if (type === ERROR || type === FATAL) {
       this.appLogger[type](message);
     } else if (this.config.debugLogging) {
