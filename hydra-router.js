@@ -91,7 +91,10 @@ hydra.init(`${__dirname}/config/config.json`, false)
     * @param {object} response - Node HTTP response object
     */
     let server = http.createServer((request, response) => {
-      serviceRouter.routeRequest(request, response);
+      serviceRouter.routeRequest(request, response)
+        .catch((err) => {
+          appLogger.fatal(err);
+        });
     });
     server.listen(serviceInfo.servicePort);
 
