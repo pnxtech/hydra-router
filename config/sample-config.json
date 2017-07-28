@@ -20,7 +20,8 @@
         "elasticsearch": {
           "host": "localhost",
           "port": 9200,
-          "index": "hydra"
+          "index": "hydra",
+          "rotate": "daily"
         }
       }
     },
