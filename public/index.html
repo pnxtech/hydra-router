@@ -226,6 +226,10 @@ class DashboardScreen extends Component {
       state.nodes.forEach((node) => {
         let content = [
           h('p', {},
+            h('b', {}, 'HostName: '),
+            node.hostName
+          ),
+          h('p', {},
             h('b', {}, 'Description: '),
             node.serviceDescription
           ),
