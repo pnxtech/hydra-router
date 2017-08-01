@@ -875,6 +875,10 @@ class ServiceRouter {
             this.routerTable[serviceName] = newRouteItems;
           }
         });
+      })
+      .catch((err) => {
+        this.log(FATAL, `HR: ${err.message}`);
+        this.log(FATAL, err);
       });
   }
 }
