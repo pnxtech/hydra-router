@@ -5,6 +5,8 @@ if (process.env.NEW_RELIC_LICENSE_KEY) {
 }
 
 const debug = require('debug')('hydra-router');
+const os = require('os');
+const util = require('util');
 const Promise = require('bluebird');
 const hydra = require('hydra');
 const UMFMessage = hydra.getUMFMessageHelper();
@@ -84,6 +86,7 @@ class ServiceRouter {
     let queuerDB = config.hydra.queuerDB ? config.hydra.queuerDB : 0;
     this.queuer.init(hydra.getClonedRedisClient(), queuerDB);
 
+    this.hostName = os.hostname();
     this.routerTable = routesObj;
     this._refreshRoutes();
   }
@@ -604,6 +607,12 @@ class ServiceRouter {
       readStream.pipe(response);
       return;
     }
+
+    if (matchResult.pattern === '/health') {
+      this._handleHealth(response);
+      return;
+    }
+
     if (matchResult.pattern === '/v1/router/list/:thing') {
       if (matchResult.params.thing === 'routes') {
         this._handleRouteListRoutes(response);
@@ -633,7 +642,7 @@ class ServiceRouter {
 
   /**
   * @name _handleRouteVersion
-  * @summary Handle list routes requests. /v1/router/version.
+  * @summary Handle version request. /v1/router/version.
   * @private
   * @param {object} response - Node HTTP response object
   * @return {undefined}
@@ -643,6 +652,45 @@ class ServiceRouter {
       result: {
         version
       }
+    });
+  }
+
+  /**
+  * @name _handleHealth
+  * @summary Handle health request. /health.
+  * @private
+  * @param {object} response - Node HTTP response object
+  * @return {undefined}
+  */
+  _handleHealth(response) {
+    let lines = [];
+    let keyval = [];
+    let map = {};
+    let memory = util.inspect(process.memoryUsage());
+
+    memory = memory.replace(/[\ \{\}.|\n]/g, '');
+    lines = memory.split(',');
+
+    Array.from(lines, (line) => {
+      keyval = line.split(':');
+      map[keyval[0]] = Number(keyval[1]);
+    });
+
+    let uptimeInSeconds = process.uptime();
+    let nodeInfo = {
+      version,
+      hostName: this.hostName,
+      sampledOn: new Date().toISOString(),
+      processID: process.pid,
+      architecture: process.arch,
+      platform: process.platform,
+      nodeVersion: process.version,
+      memory: map,
+      uptimeSeconds: uptimeInSeconds
+    };
+
+    serverResponse.sendOk(response, {
+      result: nodeInfo
     });
   }
 
