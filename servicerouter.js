@@ -392,6 +392,7 @@ class ServiceRouter {
 
       let tracer = Utils.shortID();
       if (this.config.debugLogging &&
+          (request.url.indexOf('/health') < 0) &&
           (request.url.indexOf('/v1/router') < 0) &&
           (request.headers['user-agent'] && request.headers['user-agent'].indexOf('ELB-HealthChecker') < 0)) {
         this.log(INFO, {
@@ -410,7 +411,7 @@ class ServiceRouter {
       let urlPath = `http://${request.headers['host']}${requestUrl}`;
       let urlData = url.parse(urlPath);
 
-      if (request.url.indexOf('/v1/router') < 0) {
+      if (request.url.indexOf('/health') < 0 && request.url.indexOf('/v1/router') < 0) {
         if (request.headers['referer']) {
           this.log(INFO, `HR: [${tracer}] Access ${urlPath} via ${request.headers['referer']}`);
         } else {
