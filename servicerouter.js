@@ -6,7 +6,6 @@ if (process.env.NEW_RELIC_LICENSE_KEY) {
 
 const debug = require('debug')('hydra-router');
 const os = require('os');
-const util = require('util');
 const Promise = require('bluebird');
 const hydra = require('hydra');
 const UMFMessage = hydra.getUMFMessageHelper();
@@ -663,34 +662,8 @@ class ServiceRouter {
   * @return {undefined}
   */
   _handleHealth(response) {
-    let lines = [];
-    let keyval = [];
-    let map = {};
-    let memory = util.inspect(process.memoryUsage());
-
-    memory = memory.replace(/[\ \{\}.|\n]/g, '');
-    lines = memory.split(',');
-
-    Array.from(lines, (line) => {
-      keyval = line.split(':');
-      map[keyval[0]] = Number(keyval[1]);
-    });
-
-    let uptimeInSeconds = process.uptime();
-    let nodeInfo = {
-      version,
-      hostName: this.hostName,
-      sampledOn: new Date().toISOString(),
-      processID: process.pid,
-      architecture: process.arch,
-      platform: process.platform,
-      nodeVersion: process.version,
-      memory: map,
-      uptimeSeconds: uptimeInSeconds
-    };
-
     serverResponse.sendOk(response, {
-      result: nodeInfo
+      result: hydra.getHealth()
     });
   }
 
