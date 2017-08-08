@@ -9,7 +9,7 @@
 */
 let routeList = [
   '[get]/',
-  '[get]/health',
+  '[get]/v1/router/health',
   '[get]/v1/router/list/:thing',
   '[get]/v1/router/version',
   '[get]/v1/router/clear',

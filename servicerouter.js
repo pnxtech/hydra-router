@@ -392,7 +392,6 @@ class ServiceRouter {
 
       let tracer = Utils.shortID();
       if (this.config.debugLogging &&
-          (request.url.indexOf('/health') < 0) &&
           (request.url.indexOf('/v1/router') < 0) &&
           (request.headers['user-agent'] && request.headers['user-agent'].indexOf('ELB-HealthChecker') < 0)) {
         this.log(INFO, {
@@ -411,7 +410,7 @@ class ServiceRouter {
       let urlPath = `http://${request.headers['host']}${requestUrl}`;
       let urlData = url.parse(urlPath);
 
-      if (request.url.indexOf('/health') < 0 && request.url.indexOf('/v1/router') < 0) {
+      if (request.url.indexOf('/v1/router') < 0) {
         if (request.headers['referer']) {
           this.log(INFO, `HR: [${tracer}] Access ${urlPath} via ${request.headers['referer']}`);
         } else {
@@ -608,11 +607,6 @@ class ServiceRouter {
       return;
     }
 
-    if (matchResult.pattern === '/health') {
-      this._handleHealth(response);
-      return;
-    }
-
     if (matchResult.pattern === '/v1/router/list/:thing') {
       if (matchResult.params.thing === 'routes') {
         this._handleRouteListRoutes(response);
@@ -625,6 +619,8 @@ class ServiceRouter {
       }
     } else if (matchResult.pattern.indexOf('/v1/router/clear') > -1) {
       this._clearServices(response);
+    } else if (matchResult.pattern.indexOf('/v1/router/health') > -1) {
+      this._handleHealth(response);
     } else if (matchResult.pattern.indexOf('/v1/router/refresh') > -1) {
       this._refreshRoutes(matchResult.params.service);
       serverResponse.sendOk(response);
@@ -657,7 +653,7 @@ class ServiceRouter {
 
   /**
   * @name _handleHealth
-  * @summary Handle health request. /health.
+  * @summary Handle health request.
   * @private
   * @param {object} response - Node HTTP response object
   * @return {undefined}

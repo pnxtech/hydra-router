@@ -11,6 +11,7 @@ RUN echo "net.core.somaxconn = 3072" >> /etc/sysctl.conf && \
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
+HEALTHCHECK --interval=5m --timeout=3s CMD curl -f http://localhost:80/v1/router/health || exit 1
 ADD . /usr/src/app
 RUN npm install -g pino-elasticsearch
 RUN npm install --production
