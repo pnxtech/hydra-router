@@ -62,7 +62,7 @@ console.log(`
       forEach((itf) => {
         interfaces[itf].forEach((interfaceRecord)=>{
           if (interfaceRecord.family === 'IPv4') {
-            console.log(`* ${itf}: ${interfaceRecord.address}`);
+            console.log(`* ${itf}: ${interfaceRecord.address} ${interfaceRecord.netmask}`);
           }
         });
       });
