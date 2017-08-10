@@ -20,6 +20,7 @@ let routeList = [
 ];
 
 
+const os = require('os');
 const http = require('http');
 const hydra = require('hydra');
 const serviceRouter = require('./servicerouter');
@@ -42,8 +43,30 @@ hydra.init(`${__dirname}/config/config.json`, false)
   })
   .then((serviceInfo) => {
     let logEntry = `Starting hydra-router service ${serviceInfo.serviceName}:${hydra.getInstanceVersion()} on ${serviceInfo.serviceIP}:${serviceInfo.servicePort}`;
+
+console.log(`
+    __  __          __              ____              __
+   / / / /_  ______/ /________ _   / __ \\____  __  __/ /____  _____
+  / /_/ / / / / __  / ___/ __ \`/  / /_/ / __ \\/ / / / __/ _ \\/ ___/
+ / __  / /_/ / /_/ / /  / /_/ /  / _, _/ /_/ / /_/ / /_/  __/ /
+/_/ /_/\\__, /\\__,_/_/   \\__,_/  /_/ |_|\\____/\\__,_/\\__/\\___/_/
+      /____/
+`);
+
     console.log(logEntry);
     hydra.sendToHealthLog('info', logEntry);
+
+    let interfaces = os.networkInterfaces();
+    console.log('Detected IPv4 IPs:');
+    Object.keys(interfaces).
+      forEach((itf) => {
+        interfaces[itf].forEach((interfaceRecord)=>{
+          if (interfaceRecord.family === 'IPv4') {
+            console.log(`* ${itf}: ${interfaceRecord.address}`);
+          }
+        });
+      });
+    console.log('');
 
     appLogger = hydraLogger.getLogger();
     appLogger.info({
