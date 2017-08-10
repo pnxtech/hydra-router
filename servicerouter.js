@@ -264,7 +264,12 @@ class ServiceRouter {
     if (msg.to.indexOf('[') > -1 && msg.to.indexOf(']') > -1) {
       // does route point to an HTTP method? If so, route through HTTP
       // i.e. [get] [post] etc...
-      this.wsRouteThroughHttp(ws, msg.toJSON());
+      let toRoute = UMFMessage.parseRoute(msg.to);
+      if (toRoute.serviceName === 'hydra-router') {
+        this._handleRouterRequestWS(ws, toRoute);
+      } else {
+        this.wsRouteThroughHttp(ws, msg.toJSON());
+      }
     } else {
       switch (msg.type) {
         case 'ping': {
@@ -637,18 +642,73 @@ class ServiceRouter {
   }
 
   /**
+  * @name _handleRouterRequestWS
+  * @summary Handle router request via websockets
+  * @private
+  * @param {object} ws - websocket
+  * @param {object} route - route request
+  * @return {undefined}
+  */
+  _handleRouterRequestWS(ws, route) {
+    let err = false;
+    let responseMessage = UMFMessage.createMessage({
+      to: `${ws.id}@client:/`,
+      from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
+      body: {}
+    });
+
+    if (route.apiRoute.indexOf('/v1/router/list') > -1) {
+      if (route.apiRoute.indexOf('routes') > -1) {
+        this._handleRouteListRoutes(null, ws, responseMessage);
+      } else if (route.apiRoute.indexOf('services') > -1) {
+        this._handleRouteListServices(null, ws, responseMessage);
+      } else if (route.apiRoute.indexOf('nodes') > -1) {
+        this._handleRouteListNodes(null, ws, responseMessage);
+      } else {
+        err = true;
+      }
+    } else if (route.apiRoute.indexOf('/v1/router/clear') > -1) {
+      this._clearServices(null, ws, responseMessage);
+    } else if (route.apiRoute.indexOf('/v1/router/health') > -1) {
+      this._handleHealth(null, ws, responseMessage);
+    } else if (route.apiRoute.indexOf('/v1/router/refresh') > -1) {
+      this._refreshRoutes(null, ws, responseMessage);
+    } else if (route.apiRoute.indexOf('/v1/router/version') > -1) {
+      this._handleRouteVersion(null, ws, responseMessage);
+    } else if (route.apiRoute.indexOf('/v1/router/stats') > -1) {
+      this._handleRouteStats(null, ws, responseMessage);
+    } else {
+      err = true;
+    }
+
+    if (err) {
+      responseMessage.body = {
+        error: `Route ${route.apiRoute} is not routable.`
+      };
+      this._sendWSMessage(ws, responseMessage.toJSON());
+    }
+  }
+
+  /**
   * @name _handleRouteVersion
   * @summary Handle version request. /v1/router/version.
   * @private
   * @param {object} response - Node HTTP response object
+  * @param {object} ws - websocket object
+  * @param {object} responseMessage - WS message to use for response
   * @return {undefined}
   */
-  _handleRouteVersion(response) {
-    serverResponse.sendOk(response, {
-      result: {
-        version
-      }
-    });
+  _handleRouteVersion(response, ws, responseMessage) {
+    if (response) {
+      serverResponse.sendOk(response, {
+        result: {
+          version
+        }
+      });
+    } else {
+      responseMessage.body = {version};
+      this._sendWSMessage(ws, responseMessage.toJSON());
+    }
   }
 
   /**
@@ -656,12 +716,20 @@ class ServiceRouter {
   * @summary Handle health request.
   * @private
   * @param {object} response - Node HTTP response object
+  * @param {object} ws - websocket object
+  * @param {object} responseMessage - WS message to use for response
   * @return {undefined}
   */
-  _handleHealth(response) {
-    serverResponse.sendOk(response, {
-      result: hydra.getHealth()
-    });
+  _handleHealth(response, ws, responseMessage) {
+    let healthInfo = hydra.getHealth();
+    if (response) {
+      serverResponse.sendOk(response, {
+        result: healthInfo
+      });
+    } else {
+      responseMessage.body = healthInfo;
+      this._sendWSMessage(ws, responseMessage.toJSON());
+    }
   }
 
   /**
@@ -669,14 +737,22 @@ class ServiceRouter {
   * @summary Handle stats routes requests. /v1/router/stats
   * @private
   * @param {object} response - Node HTTP response object
+  * @param {object} ws - websocket object
+  * @param {object} responseMessage - WS message to use for response
   * @return {undefined}
   */
-  _handleRouteStats(response) {
-    serverResponse.sendOk(response, {
-      result: {
-        logs: this.issueLog
-      }
-    });
+  _handleRouteStats(response, ws, responseMessage) {
+    let result = {
+      logs: this.issueLog
+    };
+    if (response) {
+      serverResponse.sendOk(response, {
+        result
+      });
+    } else {
+      responseMessage.body = result;
+      this._sendWSMessage(ws, responseMessage.toJSON());
+    }
   }
 
   /**
@@ -684,9 +760,11 @@ class ServiceRouter {
   * @summary Handle list routes requests. /v1/router/list/routes.
   * @private
   * @param {object} response - Node HTTP response object
+  * @param {object} ws - websocket object
+  * @param {object} responseMessage - WS message to use for response
   * @return {undefined}
   */
-  _handleRouteListRoutes(response) {
+  _handleRouteListRoutes(response, ws, responseMessage) {
     let routeList = [];
     for (let route of Object.keys(this.routerTable)) {
       let routes = [];
@@ -698,9 +776,14 @@ class ServiceRouter {
         routes
       });
     }
-    serverResponse.sendOk(response, {
-      result: routeList
-    });
+    if (response) {
+      serverResponse.sendOk(response, {
+        result: routeList
+      });
+    } else {
+      responseMessage.body = routeList;
+      this._sendWSMessage(ws, responseMessage.toJSON());
+    }
   }
 
   /**
@@ -708,9 +791,11 @@ class ServiceRouter {
   * @summary Handle list services requests. /v1/router/list/services.
   * @private
   * @param {object} response - Node HTTP response object
+  * @param {object} ws - websocket object
+  * @param {object} responseMessage - WS message to use for response
   * @return {undefined}
   */
-  _handleRouteListServices(response) {
+  _handleRouteListServices(response, ws, responseMessage) {
     let findItemData = (space, key, instanceID) => {
       if (!space[key]) {
         return {};
@@ -738,17 +823,29 @@ class ServiceRouter {
             serviceInstanceDataItems.push(serviceInstanceData);
           });
         });
-        serverResponse.sendOk(response, {
-          result: serviceInstanceDataItems
-        });
+        if (response) {
+          serverResponse.sendOk(response, {
+            result: serviceInstanceDataItems
+          });
+        } else {
+          responseMessage.body = serviceInstanceDataItems;
+          this._sendWSMessage(ws, responseMessage.toJSON());
+        }
       })
       .catch((err) => {
         this.log(FATAL, err);
-        serverResponse.sendServerError(response, {
-          result: {
-            reason: err.message
-          }
-        });
+        if (response) {
+          serverResponse.sendServerError(response, {
+            result: {
+              reason: err.message
+            }
+          });
+        } else {
+          responseMessage.body = {
+            error: err.message
+          };
+          this._sendWSMessage(ws, responseMessage.toJSON());
+        }
       });
   }
 
@@ -757,22 +854,36 @@ class ServiceRouter {
   * @summary Handle request to list nodes
   * @private
   * @param {object} response - Node HTTP response object
+  * @param {object} ws - websocket object
+  * @param {object} responseMessage - WS message to use for response
   * @return {undefined}
   */
-  _handleRouteListNodes(response) {
+  _handleRouteListNodes(response, ws, responseMessage) {
     hydra.getServiceNodes()
       .then((nodes) => {
-        serverResponse.sendOk(response, {
-          result: nodes
-        });
+        if (response) {
+          serverResponse.sendOk(response, {
+            result: nodes
+          });
+        } else {
+          responseMessage.body = nodes;
+          this._sendWSMessage(ws, responseMessage.toJSON());
+        }
       })
       .catch((err) => {
         this.log(FATAL, err);
-        serverResponse.sendServerError(response, {
-          result: {
-            reason: err.message
-          }
-        });
+        if (response) {
+          serverResponse.sendServerError(response, {
+            result: {
+              reason: err.message
+            }
+          });
+        } else {
+          responseMessage.body = {
+            error: err.message
+          };
+          this._sendWSMessage(ws, responseMessage.toJSON());
+        }
       });
   }
 
@@ -825,16 +936,20 @@ class ServiceRouter {
   /**
   * @name _clearServices
   * @summary Remove dead services to clear the dashboard
-  * @param {object} response - HTTP response object
+  * @param {object} response - Node HTTP response object
+  * @param {object} ws - websocket object
+  * @param {object} responseMessage - WS message to use for response
   * @return {undefined}
   */
-  _clearServices(response) {
+  _clearServices(response, ws, responseMessage) {
     let redirect = () => {
       const HTTP_FOUND = ServerResponse.HTTP_FOUND; // HTTP redirect
-      response.writeHead(HTTP_FOUND, {
-        'Location': '/'
-      });
-      response.end();
+      if (response) {
+        response.writeHead(HTTP_FOUND, {
+          'Location': '/'
+        });
+        response.end();
+      }
     };
     const FIVE_SECONDS = 5;
     hydra.getServiceNodes()
@@ -848,15 +963,28 @@ class ServiceRouter {
         if (ids.length) {
           let redisClient = hydra.getClonedRedisClient();
           redisClient.hdel('hydra:service:nodes', ids, (_err, _result) => {
-            redirect();
+            if (response) {
+              redirect();
+            }
           });
           redisClient.quit();
         } else {
-          redirect();
+          if (response) {
+            redirect();
+          }
+        }
+        if (!response) {
+          this._sendWSMessage(ws, responseMessage.toJSON());
         }
       })
       .catch((err) => {
         console.log(err);
+        if (!response) {
+          responseMessage.body = {
+            error: err.message
+          };
+          this._sendWSMessage(ws, responseMessage.toJSON());
+        }
       });
   }
 
