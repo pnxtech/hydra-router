@@ -42,15 +42,15 @@ hydra.init(`${__dirname}/config/config.json`, false)
     return hydra.registerService();
   })
   .then((serviceInfo) => {
-    let logEntry = `Starting hydra-router service ${serviceInfo.serviceName}:${hydra.getInstanceVersion()} on ${serviceInfo.serviceIP}:${serviceInfo.servicePort}`;
+    let logEntry = `Starting service ${serviceInfo.serviceName}:${hydra.getInstanceVersion()} on ${serviceInfo.serviceIP}:${serviceInfo.servicePort}`;
 
 console.log(`
-    __  __          __              ____              __
-   / / / /_  ______/ /________ _   / __ \\____  __  __/ /____  _____
-  / /_/ / / / / __  / ___/ __ \`/  / /_/ / __ \\/ / / / __/ _ \\/ ___/
- / __  / /_/ / /_/ / /  / /_/ /  / _, _/ /_/ / /_/ / /_/  __/ /
-/_/ /_/\\__, /\\__,_/_/   \\__,_/  /_/ |_|\\____/\\__,_/\\__/\\___/_/
-      /____/
+ _   _           _             ____             _
+| | | |_   _  __| |_ __ __ _  |  _ \\ ___  _   _| |_ ___ _ __
+| |_| | | | |/ _\` | '__/ _\` | | |_) / _ \\| | | | __/ _ \\ '__|
+|  _  | |_| | (_| | | | (_| | |  _ < (_) | |_| | ||  __/ |
+|_| |_|\\__, |\\__,_|_|  \\__,_| |_| \\_\\___/ \\__,_|\\__\\___|_|
+       |___/
 `);
 
     console.log(logEntry);
@@ -120,7 +120,11 @@ console.log(`
           appLogger.fatal(err);
         });
     });
-    server.listen(serviceInfo.servicePort);
+    if (!config.hydra.serviceInterface) {
+      server.listen(serviceInfo.servicePort);
+    } else {
+      server.listen(serviceInfo.servicePort, serviceInfo.serviceIP);
+    }
 
     /**
     * Setup websocket message handler.
