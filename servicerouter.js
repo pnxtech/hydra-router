@@ -595,7 +595,7 @@ class ServiceRouter {
       }
     }
 
-    if (!allowRouterCall) {
+    if (urlData.host !== 'localhost' && !allowRouterCall) {
       serverResponse.sendResponse(ServerResponse.HTTP_NOT_FOUND, response);
       return;
     }
@@ -1010,12 +1010,6 @@ class ServiceRouter {
               newRouteItems.push({
                 pattern: routePattern,
                 route: new Route(routePattern)
-              });
-            });
-            [`/${serviceName}`, `/${serviceName}/`, `/${serviceName}/:rest`].forEach((pattern) => {
-              newRouteItems.push({
-                pattern: pattern,
-                route: new Route(pattern)
               });
             });
             this.routerTable[serviceName] = newRouteItems;
