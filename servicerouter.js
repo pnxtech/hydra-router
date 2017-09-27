@@ -208,9 +208,10 @@ class ServiceRouter {
   * @summary Send a message on socket connect
   * @param {object} ws - websocket
   * @param {number} id - connection id if any
+  * @param {object} req - HTTP request
   * @return {undefined}
   */
-  sendConnectMessage(ws, id) {
+  sendConnectMessage(ws, id, req) {
     ws.id = id || Utils.shortID();
     if (!this.wsClients[ws.id]) {
       this.wsClients[ws.id] = ws;
@@ -220,7 +221,8 @@ class ServiceRouter {
       from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
       type: 'connection',
       body: {
-        id: ws.id
+        id: ws.id,
+        ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress
       }
     });
     this.log(INFO, `HR: Sending connection message to new websocket client ${Utils.safeJSONStringify(welcomeMessage)}`);
@@ -294,7 +296,7 @@ class ServiceRouter {
             });
             this._sendWSMessage(ws, umf.toJSON());
           } else {
-            this.sendConnectMessage(ws, msg.body.id);
+            this.sendConnectMessage(ws, msg.body.id, null);
             let iid = setInterval(() => {
               let queueName = `hydra-router:message:queue:${msg.body.id}`;
               this.queuer.dequeue(queueName)

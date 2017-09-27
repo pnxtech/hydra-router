@@ -130,8 +130,8 @@ console.log(`
     * Setup websocket message handler.
     */
     let wss = new WebSocketServer({server: server});
-    wss.on('connection', (ws) => {
-      serviceRouter.sendConnectMessage(ws);
+    wss.on('connection', (ws, req) => {
+      serviceRouter.sendConnectMessage(ws, null, req);
 
       ws.on('message', (message) => {
         serviceRouter.routeWSMessage(ws, message);
