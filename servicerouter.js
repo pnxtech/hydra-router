@@ -216,13 +216,19 @@ class ServiceRouter {
     if (!this.wsClients[ws.id]) {
       this.wsClients[ws.id] = ws;
     }
+    let ip;
+    if (req.headers && req.headers['x-forwarded-for']) {
+      ip = req.headers['x-forwarded-for'];
+    } else {
+      ip = req.connection.remoteAddress;
+    }
     let welcomeMessage = UMFMessage.createMessage({
       to: `${ws.id}@client:/`,
       from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
       type: 'connection',
       body: {
         id: ws.id,
-        ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress
+        ip
       }
     });
     this.log(INFO, `HR: Sending connection message to new websocket client ${Utils.safeJSONStringify(welcomeMessage)}`);
