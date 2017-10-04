@@ -216,8 +216,8 @@ class ServiceRouter {
     if (!this.wsClients[ws.id]) {
       this.wsClients[ws.id] = ws;
     }
-    let ip;
-    if (req.headers && req.headers['x-forwarded-for']) {
+    let ip = null;
+    if (req && req.headers && req.headers['x-forwarded-for']) {
       ip = req.headers['x-forwarded-for'];
     } else {
       ip = req.connection.remoteAddress;
