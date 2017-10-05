@@ -220,7 +220,9 @@ class ServiceRouter {
     if (req && req.headers && req.headers['x-forwarded-for']) {
       ip = req.headers['x-forwarded-for'];
     } else {
-      ip = req.connection.remoteAddress;
+      if (req.connection && req.connection.remoteAddress) {
+        ip = req.connection.remoteAddress;
+      }
     }
     let welcomeMessage = UMFMessage.createMessage({
       to: `${ws.id}@client:/`,
