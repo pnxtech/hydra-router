@@ -216,14 +216,19 @@ class ServiceRouter {
     if (!this.wsClients[ws.id]) {
       this.wsClients[ws.id] = ws;
     }
-    let ip = null;
-    if (req && req.headers && req.headers['x-forwarded-for']) {
-      ip = req.headers['x-forwarded-for'];
-    } else {
-      if (req.connection && req.connection.remoteAddress) {
-        ip = req.connection.remoteAddress;
+    let ip;
+    try {
+      if (req && req.headers && req.headers['x-forwarded-for']) {
+        ip = req.headers['x-forwarded-for'];
+      } else {
+        if (req.connection !== null && req.connection.remoteAddress !== null) {
+          ip = req.connection.remoteAddress;
+        }
       }
+    } catch (e) {
+      ip = 'unknown';
     }
+    this.log(INFO, `HR: sendConnectMessage detected IP: ${ip}`);
     let welcomeMessage = UMFMessage.createMessage({
       to: `${ws.id}@client:/`,
       from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
