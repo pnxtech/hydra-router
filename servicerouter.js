@@ -287,6 +287,10 @@ class ServiceRouter {
       }
     } else {
       switch (msg.type) {
+        case 'log': {
+          this.log(INFO, msg.toJSON());
+          return;
+        }
         case 'ping': {
           let newMsg = UMFMessage.createMessage({
             to: msg.from,
