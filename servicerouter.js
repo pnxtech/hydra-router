@@ -350,6 +350,7 @@ class ServiceRouter {
               this.log(ERROR, `HR: Unable to route WS message because an instance of ${toRoute.serviceName} isn't available`);
               return;
             }
+
             toRoute = UMFMessage.parseRoute(msg.to);
             let newMsg = UMFMessage.createMessage({
               mid: msg.mid,
@@ -358,8 +359,9 @@ class ServiceRouter {
               body: msg.body,
               from: msg.from
             });
-            hydra.sendMessage(newMsg.toJSON());
-            this.log(INFO, `HR: Routed WS message ${Utils.safeJSONStringify(newMsg.toJSON())}`);
+            let wsMsg = Object.assign({}, msg, newMsg);
+            hydra.sendMessage(wsMsg.toJSON());
+            this.log(INFO, `HR: Routed WS message ${Utils.safeJSONStringify(wsMsg.toJSON())}`);
           });
       }
     }
