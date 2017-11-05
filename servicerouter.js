@@ -67,7 +67,9 @@ class ServiceRouter {
       let newRouteItems = [];
       let routes = routesObj[serviceName];
       routes.forEach((routePattern) => {
-        this.log(INFO, `HR: ${serviceName} adding ${routePattern}`);
+        if (this.config.debugLogging) {
+          this.log(INFO, `HR: ${serviceName} adding ${routePattern}`);
+        }
         let idx = routePattern.indexOf(']');
         if (idx > -1) {
           routePattern = routePattern.substring(idx + 1);
@@ -140,8 +142,9 @@ class ServiceRouter {
   * @return {undefined}
   */
   _handleIncomingChannelMessage(msg) {
-    this.log(INFO, `HR: Incoming channel message: ${Utils.safeJSONStringify(msg)}`);
-
+    if (this.config.debugLogging) {
+      this.log(INFO, `HR: Incoming channel message: ${Utils.safeJSONStringify(msg)}`);
+    }
     let message = UMFMessage.createMessage(msg);
     if (message.body.action === 'refresh') {
       this._refreshRoutes(message.body.serviceName);
@@ -185,7 +188,9 @@ class ServiceRouter {
           result: data.result
         };
         this._sendWSMessage(ws, replyMessage.toJSON());
-        this.log(INFO, `HR: WS passthrough response for ${Utils.safeJSONStringify(longMessage)} IS ${Utils.safeJSONStringify(replyMessage)}`);
+        if (this.config.debugLogging) {
+          this.log(INFO, `HR: WS passthrough response for ${Utils.safeJSONStringify(longMessage)} IS ${Utils.safeJSONStringify(replyMessage)}`);
+        }
       })
       .catch((err) => {
         this.log(FATAL, err);
@@ -228,7 +233,9 @@ class ServiceRouter {
     } catch (e) {
       ip = 'unknown';
     }
-    this.log(INFO, `HR: sendConnectMessage detected IP: ${ip}`);
+    if (this.config.debugLogging) {
+      this.log(INFO, `HR: sendConnectMessage detected IP: ${ip}`);
+    }
     let welcomeMessage = UMFMessage.createMessage({
       to: `${ws.id}@client:/`,
       from: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
@@ -238,7 +245,9 @@ class ServiceRouter {
         ip
       }
     });
-    this.log(INFO, `HR: Sending connection message to new websocket client ${Utils.safeJSONStringify(welcomeMessage)}`);
+    if (this.config.debugLogging) {
+      this.log(INFO, `HR: Sending connection message to new websocket client ${Utils.safeJSONStringify(welcomeMessage)}`);
+    }
     this._sendWSMessage(ws, welcomeMessage.toJSON());
   }
 
@@ -347,9 +356,12 @@ class ServiceRouter {
                 error: `No ${toRoute.serviceName} instances available`
               };
               this._sendWSMessage(ws, umf.toJSON());
-              this.log(ERROR, `HR: Unable to route WS message because an instance of ${toRoute.serviceName} isn't available`);
+              if (this.config.debugLogging) {
+                this.log(ERROR, `HR: Unable to route WS message because an instance of ${toRoute.serviceName} isn't available`);
+              }
               return;
             }
+
             toRoute = UMFMessage.parseRoute(msg.to);
             let newMsg = UMFMessage.createMessage({
               mid: msg.mid,
@@ -358,8 +370,11 @@ class ServiceRouter {
               body: msg.body,
               from: msg.from
             });
-            hydra.sendMessage(newMsg.toJSON());
-            this.log(INFO, `HR: Routed WS message ${Utils.safeJSONStringify(newMsg.toJSON())}`);
+            let wsMsg = Object.assign({}, msg, newMsg);
+            hydra.sendMessage(wsMsg.toJSON());
+            if (this.config.debugLogging) {
+              this.log(INFO, `HR: Routed WS message ${Utils.safeJSONStringify(wsMsg.toJSON())}`);
+            }
           });
       }
     }
@@ -396,7 +411,9 @@ class ServiceRouter {
         }
       }
     }
-    this.log(INFO, `HR: ${urlData.pathname} was not matched to a route`);
+    if (this.config.debugLogging) {
+      this.log(INFO, `HR: ${urlData.pathname} was not matched to a route`);
+    }
     return null;
   }
 
@@ -435,10 +452,12 @@ class ServiceRouter {
       let urlData = url.parse(urlPath);
 
       if (request.url.indexOf('/v1/router') < 0) {
-        if (request.headers['referer']) {
-          this.log(INFO, `HR: [${tracer}] Access ${urlPath} via ${request.headers['referer']}`);
-        } else {
-          this.log(INFO, `HR: [${tracer}] Request for ${urlPath}`);
+        if (this.config.debugLogging) {
+          if (request.headers['referer']) {
+            this.log(INFO, `HR: [${tracer}] Access ${urlPath} via ${request.headers['referer']}`);
+          } else {
+            this.log(INFO, `HR: [${tracer}] Request for ${urlPath}`);
+          }
         }
       }
 
@@ -473,7 +492,9 @@ class ServiceRouter {
       }
 
       if (!matchResult) {
-        this.log(ERROR, `HR: [${tracer}] No service match for ${request.url}`);
+        if (this.config.debugLogging) {
+          this.log(ERROR, `HR: [${tracer}] No service match for ${request.url}`);
+        }
         serverResponse.sendNotFound(response);
         resolve();
         return;
@@ -525,7 +546,10 @@ class ServiceRouter {
     message.headers['x-hydra-tracer'] = tracer;
     let msg = UMFMessage.createMessage(message).toJSON();
     msg.mid = `${msg.mid}-${tracer}`;
-    this.log(INFO, `HR: [${tracer}] Calling remote service ${Utils.safeJSONStringify(msg)}`);
+
+    if (this.config.debugLogging) {
+      this.log(INFO, `HR: [${tracer}] Calling remote service ${Utils.safeJSONStringify(msg)}`);
+    }
 
     hydra.makeAPIRequest(msg, {timeout: this.requestTimeout})
       .then((data) => {
