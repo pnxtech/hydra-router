@@ -370,7 +370,7 @@ class ServiceRouter {
               body: msg.body,
               from: msg.from
             });
-            let wsMsg = Object.assign({}, msg, newMsg);
+            let wsMsg = UMFMessage.createMessage(Object.assign({}, msg.toJSON(), newMsg.toJSON()));
             hydra.sendMessage(wsMsg.toJSON());
             if (this.config.debugLogging) {
               this.log(INFO, `HR: Routed WS message ${Utils.safeJSONStringify(wsMsg.toJSON())}`);
