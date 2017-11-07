@@ -5,6 +5,8 @@
   "debugLogging": true,
   "queuerDB": 0,
   "requestTimeout": 5,
+  "forceMessageSignature": false,
+  "signatureSharedSecret": "d632dd6d-fb75-44cc-bdbf-ee1364f3716c",
   "hydra": {
     "serviceName": "hydra-router",
     "serviceDescription": "Service Router",
