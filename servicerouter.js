@@ -285,6 +285,30 @@ class ServiceRouter {
       return;
     }
 
+    // handle signed messages
+    if (this.config.forceMessageSignature) {
+      let badSig = (errorMessage) => {
+        umf.body = {
+          error: errorMessage
+        };
+        this._sendWSMessage(ws, umf.toJSON());
+        setTimeout(() => {
+          ws.close();
+        }, 2000);
+      };
+      let oldSig = msg.signature || msg.sig;
+      if (oldSig) {
+        msg.signMessage('sha256', this.config.signatureSharedSecret);
+        if (oldSig !== msg.signature) {
+          badSig('Invalid signed UMF message');
+          return;
+        }
+      } else {
+        badSig('Not a signed UMF message');
+        return;
+      }
+    }
+
     if (msg.to.indexOf('[') > -1 && msg.to.indexOf(']') > -1) {
       // does route point to an HTTP method? If so, route through HTTP
       // i.e. [get] [post] etc...
