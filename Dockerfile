@@ -1,7 +1,7 @@
 FROM node:8.0.0-alpine
 MAINTAINER Carlos Justiniano cjus34@gmail.com
 EXPOSE 80
-HEALTHCHECK --start-period=10s --interval=30s --timeout=3s CMD curl -f http://localhost:80/v1/router/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost:80/v1/router/health || exit 1
 
 # Performance tuning
 RUN echo "net.core.somaxconn = 3072" >> /etc/sysctl.conf && \
