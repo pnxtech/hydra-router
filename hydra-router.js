@@ -15,6 +15,7 @@ let routeList = [
   '[get]/v1/router/clear',
   '[get]/v1/router/refresh',
   '[get]/v1/router/refresh/:service',
+  '[get]/v1/router/log',
   '[get]/v1/router/stats',
   '[post]/v1/router/message'
 ];
@@ -23,7 +24,7 @@ let routeList = [
 const os = require('os');
 const http = require('http');
 const hydra = require('hydra');
-const serviceRouter = require('./servicerouter');
+const serviceRouter = require('./lib/servicerouter');
 const WebSocketServer = require('ws').Server;
 
 const HydraLogger = require('fwsp-logger').HydraLogger;
@@ -159,6 +160,12 @@ console.log(`
     */
     routesObj = Object.assign(routesObj, config.externalRoutes);
     serviceRouter.init(config, routesObj, appLogger);
+
+    if (global.gc) {
+      global.gc();
+    } else {
+      console.warn('No GC hook! Start Hydra-Router using `node --expose-gc hydra-router.js`.');
+    }
     return null; // to silence promise warning: http://goo.gl/rRqMUw
   })
   .catch((err) => {

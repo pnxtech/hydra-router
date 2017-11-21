@@ -10,7 +10,7 @@ ws.on('open', () => {
     'from': 'client:/',
     'body': {}
   });
-  ws.send(JSON.stringify(umf));
+  ws.send('JSON.stringify(umf)');
 });
 
 ws.on('message', (data, flags) => {
