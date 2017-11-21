@@ -12,7 +12,7 @@
         background-color: lightgray;
       }
       .page-body {
-        margin-top: 8rem;
+        margin-top: 1rem;
         display: flex;
         justify-content: space-around;
         flex-wrap: wrap;
@@ -52,6 +52,12 @@
       }
       .linealt {
         background-color: #F0F8FF;
+      }
+      .instance-info {
+        font-size: 1rem;
+        color: black;
+        padding-top: 6rem;
+        text-align: center;
       }
     </style>
 	</head>
@@ -210,7 +216,17 @@ class DashboardScreen extends Component {
         return res.json();
       })
       .then((res) => {
-        this.setState({nodes: res.result});
+        let sortedNodes = res.result.sort((a, b) => {
+          if (a.serviceName < b.serviceName)
+            return -1;
+          if (a.serviceName > b.serviceName)
+            return 1;
+          return 0;
+        });
+        this.setState({
+          instanceID: `hydra-router (${res.version}) running on ${res.hostname} - (${res.instanceID})`,
+          nodes: sortedNodes
+        });
       })
       .catch((err) => {
         console.log(err);
@@ -273,6 +289,7 @@ class DashboardScreen extends Component {
     }
     return (
       h('div', {class: 'container'},
+        h('div', {class: 'instance-info'}, `${state.instanceID}`),
         h('div', {class: 'page-body'}, tiles)
       )
     );
