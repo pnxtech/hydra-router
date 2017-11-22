@@ -6,13 +6,14 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.bundle.min.js"></script>
     <script src="https://unpkg.com/preact"></script>
     <style>
       body {
         background-color: lightgray;
       }
       .page-body {
-        margin-top: 1rem;
+        margin-top: 8rem;
         display: flex;
         justify-content: space-around;
         flex-wrap: wrap;
@@ -54,10 +55,11 @@
         background-color: #F0F8FF;
       }
       .instance-info {
+        position: relative;
+        top: 7rem;
         font-size: 1rem;
-        color: black;
-        padding-top: 6rem;
         text-align: center;
+        color: black;
       }
     </style>
 	</head>
@@ -118,6 +120,9 @@ class ButtonBar extends Component {
       h('div', {class: 'btn-group pull-right buttonbar', role: 'group', 'aria-label': 'Left Align'},
         h('button', {'type': 'button', class: 'btn btn-default', onclick: this.onPress.bind(this, 'dashboard')},
           h('span', {class: 'glyphicon glyphicon-th', 'aria-hidden': true})
+        ),
+        h('button', {'type': 'button', class: 'btn btn-default', onclick: this.onPress.bind(this, 'log')},
+          h('span', {class: 'glyphicon glyphicon-list-alt', 'aria-hidden': true})
         ),
         h('button', {'type': 'button', class: 'btn btn-default', onclick: this.onPress.bind(this, 'stats')},
           h('span', {class: 'glyphicon glyphicon-stats', 'aria-hidden': true})
@@ -297,6 +302,76 @@ class DashboardScreen extends Component {
 }
 
 /**
+* @name LogScreen
+* @summary Log screen component
+* @return {undefined}
+*/
+class LogScreen extends Component {
+  constructor(props) {
+    super(props);
+    this.setState({
+      timerID: 0
+    });
+  }
+
+  componentDidMount() {
+    this.getLogData();
+    let timerID = setInterval(() => {
+      this.getLogData();
+    }, 15000);
+    this.setState({
+      timerID
+    });
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.state.timerID);
+  }
+
+  getLogData() {
+    let tokenUrlSuffix = '';
+    const token = new RegExp("token=([^&]*)", "i").exec(window.location.search);
+    if (token !== null)  {
+      tokenUrlSuffix = '?token=' + token[1];
+    }
+    fetch('/v1/router/log' + tokenUrlSuffix)
+      .then((res) => {
+        return res.json();
+      })
+      .then((res) => {
+        this.setState({logs: res.result.logs});
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
+
+  render(props, state) {
+    let content = [];
+    if (state.logs) {
+      let i = 1;
+      state.logs.forEach((entry) => {
+        let data = (typeof entry.entry === 'object') ? JSON.stringify(entry.entry) : entry.entry;
+        let line = `${entry.ts} ${entry.type}: ${data}`;
+        i += 1;
+        let bkcolor = (i % 2) ? 'line' : 'linealt';
+        let fgcolor = (entry.type === 'error') ? 'red' : 'black';
+        content.push(
+          h('p', {class: `${bkcolor} ${fgcolor}`}, line)
+        );
+      });
+    }
+    return (
+      h('div', {class: 'container'},
+        h('div', {class: 'page-body'},
+          h(Panel, {type: 'full', icon: 'glyphicon-list-alt', title: 'Router log', titleColor: 'black', body: content})
+        )
+      )
+    );
+  }
+}
+
+/**
 * @name StatsScreen
 * @summary Stats screen component
 * @return {undefined}
@@ -334,7 +409,7 @@ class StatsScreen extends Component {
         return res.json();
       })
       .then((res) => {
-        this.setState({logs: res.result.logs});
+        this.setState({stats: res.result});
       })
       .catch((err) => {
         console.log(err);
@@ -343,23 +418,15 @@ class StatsScreen extends Component {
 
   render(props, state) {
     let content = [];
-    if (state.logs) {
-      let i = 1;
-      state.logs.forEach((entry) => {
-        let data = (typeof entry.entry === 'object') ? JSON.stringify(entry.entry) : entry.entry;
-        let line = `${entry.ts} ${entry.type}: ${data}`;
-        i += 1;
-        let bkcolor = (i % 2) ? 'line' : 'linealt';
-        let fgcolor = (entry.type === 'error') ? 'red' : 'black';
-        content.push(
-          h('p', {class: `${bkcolor} ${fgcolor}`}, line)
-        );
-      });
+    if (state.stats) {
+      content.push(
+        h('p', {}, 'Coming soon ;-)')
+      );
     }
     return (
       h('div', {class: 'container'},
         h('div', {class: 'page-body'},
-          h(Panel, {type: 'full', icon: 'glyphicon-align-justify', title: 'Router log', titleColor: 'black', body: content})
+          h(Panel, {type: 'full', icon: 'glyphicon-stats', title: 'Service Stats', titleColor: 'black', body: content})
         )
       )
     );
@@ -380,6 +447,8 @@ class Main extends Component {
     let screen = false;
     if (this.props.screen === 'dashboard') {
       screen = h(DashboardScreen, {});
+    } else if (this.props.screen === 'log') {
+      screen = h(LogScreen, {});
     } else if (this.props.screen === 'stats') {
       screen = h(StatsScreen, {});
     }
