@@ -6,7 +6,6 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.bundle.min.js"></script>
     <script src="https://unpkg.com/preact"></script>
     <style>
       body {
@@ -61,11 +60,22 @@
         text-align: center;
         color: black;
       }
+      .table-sep {
+        margin-bottom: 4rem;
+      }
+      .td-center {
+        text-align: center;
+      }
     </style>
 	</head>
 	<body>
     <script>
 const {Component, h, render} = window.preact;
+
+const ONE_SECOND = 1;
+const ONE_MINUTE = ONE_SECOND * 60;
+const ONE_QUARTER_HOUR = ONE_MINUTE * 15;
+const ONE_HOUR = ONE_QUARTER_HOUR * 4;
 
 /**
 * @name App
@@ -388,7 +398,7 @@ class StatsScreen extends Component {
     this.getStatsData();
     let timerID = setInterval(() => {
       this.getStatsData();
-    }, 15000);
+    }, 1000);
     this.setState({
       timerID
     });
@@ -416,11 +426,128 @@ class StatsScreen extends Component {
       });
   }
 
+  getLastSecond(data) {
+    return data.slice(-ONE_SECOND);
+  }
+
+  getLastMinute(data) {
+    return data.slice(-ONE_MINUTE).reduce((sum, x) => sum + x);
+  }
+
+  getLast5Minutes(data) {
+    return data.slice(-(ONE_MINUTE * 5)).reduce((sum, x) => sum + x);
+  }
+
+  getLast15Minutes(data) {
+    return data.slice(-(ONE_QUARTER_HOUR)).reduce((sum, x) => sum + x);
+  }
+
+  getLast30Minutes(data) {
+    return data.slice(-(ONE_QUARTER_HOUR * 2)).reduce((sum, x) => sum + x);
+  }
+
+  getLastHour(data) {
+    return data.reduce((sum, x) => sum + x);
+  }
+
   render(props, state) {
     let content = [];
     if (state.stats) {
+      let httpStats = [];
+      let wsStats = [];
+      let errorStats = [];
+
+      Object.keys(state.stats.httpStats).forEach((service) => {
+        let data = state.stats.httpStats[service];
+        httpStats.push(
+          h('tr', {},
+            h('td', {}, service),
+            h('td', {class: 'td-center'}, `${this.getLastSecond(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLastMinute(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLast5Minutes(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLast15Minutes(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLast30Minutes(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLastHour(data)}`)
+          )
+        );
+      });
+
+      Object.keys(state.stats.wsStats).forEach((service) => {
+        let data = state.stats.wsStats[service];
+        wsStats.push(
+          h('tr', {},
+            h('td', {}, service),
+            h('td', {class: 'td-center'}, `${this.getLastSecond(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLastMinute(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLast5Minutes(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLast15Minutes(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLast30Minutes(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLastHour(data)}`)
+          )
+        );
+      });
+
+      Object.keys(state.stats.errorStats).forEach((service) => {
+        let data = state.stats.errorStats[service];
+        errorStats.push(
+          h('tr', {},
+            h('td', {}, service),
+            h('td', {class: 'td-center'}, `${this.getLastSecond(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLastMinute(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLast5Minutes(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLast15Minutes(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLast30Minutes(data)}`),
+            h('td', {class: 'td-center'}, `${this.getLastHour(data)}`)
+          )
+        );
+      });
+
       content.push(
-        h('p', {}, 'Coming soon ;-)')
+        h('h2', {}, 'HTTP requests'),
+        h('table', {class: 'table table-striped table-sep'},
+          h('thead', {},
+            h('tr', {},
+              h('th', {}, 'Service Name'),
+              h('th', {}, 'Last second'),
+              h('th', {}, 'Last minute'),
+              h('th', {}, 'Last 5 minutes'),
+              h('th', {}, 'Last 15 minutes'),
+              h('th', {}, 'Last 30 minutes'),
+              h('th', {}, 'Last 60 minutes')
+            )
+          ),
+          h('tbody', {}, httpStats)
+        ),
+        h('h2', {}, 'WebSocket requests'),
+        h('table', {class: 'table table-striped table-sep'},
+          h('thead', {},
+            h('tr', {},
+              h('th', {}, 'Service Name'),
+              h('th', {}, 'Last second'),
+              h('th', {}, 'Last minute'),
+              h('th', {}, 'Last 5 minutes'),
+              h('th', {}, 'Last 15 minutes'),
+              h('th', {}, 'Last 30 minutes'),
+              h('th', {}, 'Last 60 minutes')
+            )
+          ),
+          h('tbody', {}, wsStats)
+        ),
+        h('h2', {}, 'Errors'),
+        h('table', {class: 'table table-striped table-sep'},
+          h('thead', {},
+            h('tr', {},
+              h('th', {}, 'Service Name'),
+              h('th', {}, 'Last second'),
+              h('th', {}, 'Last minute'),
+              h('th', {}, 'Last 5 minutes'),
+              h('th', {}, 'Last 15 minutes'),
+              h('th', {}, 'Last 30 minutes'),
+              h('th', {}, 'Last 60 minutes')
+            )
+          ),
+          h('tbody', {}, errorStats)
+        )
       );
     }
     return (
