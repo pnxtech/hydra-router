@@ -4,6 +4,10 @@
 */
 'use strict';
 
+if (process.env.NEW_RELIC_LICENSE_KEY) {
+  require('newrelic');
+}
+
 /**
 * Router route list.
 */
@@ -84,8 +88,8 @@ console.log(`
     });
 
     process.on('cleanup', () => {
-      hydra.shutdown();
-      process.exit(0);
+      hydra.shutdown()
+        .then(process.exit(-1));
     });
     process.on('SIGTERM', () => {
       appLogger.fatal('Received SIGTERM');
@@ -169,6 +173,6 @@ console.log(`
     return null; // to silence promise warning: http://goo.gl/rRqMUw
   })
   .catch((err) => {
-    console.log(err);
-    process.exit(-1);
+    appLogger.fatal(err.message);
+    process.emit('cleanup');
   });
