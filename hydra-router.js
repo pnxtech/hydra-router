@@ -24,7 +24,6 @@ let routeList = [
   '[post]/v1/router/message'
 ];
 
-
 const os = require('os');
 const http = require('http');
 const hydra = require('hydra');
@@ -35,6 +34,38 @@ const HydraLogger = require('fwsp-logger').HydraLogger;
 let hydraLogger = new HydraLogger();
 hydra.use(hydraLogger);
 let appLogger;
+
+/**
+ * Setup process exit handlers
+*/
+process.on('cleanup', () => {
+  hydra.shutdown()
+    .then(() => {
+      process.exit(-1);
+    });
+});
+process.on('SIGTERM', () => {
+  appLogger && appLogger.fatal('Received SIGTERM');
+  process.emit('cleanup');
+});
+process.on('SIGINT', () => {
+  appLogger && appLogger.fatal('Received SIGINT');
+  process.emit('cleanup');
+});
+process.on('unhandledRejection', (reason, _p) => {
+  appLogger && appLogger.fatal(reason);
+  process.emit('cleanup');
+});
+process.on('uncaughtException', (err) => {
+  let stack = err.stack;
+  delete err.__cached_trace__;
+  delete err.__previous__;
+  delete err.domain;
+  appLogger && appLogger.fatal({
+    stack
+  });
+  process.emit('cleanup');
+});
 
 let config = {};
 
@@ -85,33 +116,6 @@ console.log(`
     hydra.on('metric', (entry) => {
       let type = (entry.indexOf('unavailable') > -1) ? 'error' : 'info';
       serviceRouter.log(type, entry);
-    });
-
-    process.on('cleanup', () => {
-      hydra.shutdown()
-        .then(process.exit(-1));
-    });
-    process.on('SIGTERM', () => {
-      appLogger.fatal('Received SIGTERM');
-      process.emit('cleanup');
-    });
-    process.on('SIGINT', () => {
-      appLogger.fatal('Received SIGINT');
-      process.emit('cleanup');
-    });
-    process.on('unhandledRejection', (reason, _p) => {
-      appLogger.fatal(reason);
-      process.emit('cleanup');
-    });
-    process.on('uncaughtException', (err) => {
-      let stack = err.stack;
-      delete err.__cached_trace__;
-      delete err.__previous__;
-      delete err.domain;
-      appLogger.fatal({
-        stack
-      });
-      process.emit('cleanup');
     });
 
     /**
@@ -173,6 +177,7 @@ console.log(`
     return null; // to silence promise warning: http://goo.gl/rRqMUw
   })
   .catch((err) => {
-    appLogger.fatal(err.message);
+    let stack = err.stack;
+    console.log(stack); // console log because appLogger isn't available in this case.
     process.emit('cleanup');
   });
