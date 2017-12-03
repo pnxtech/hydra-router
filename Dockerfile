@@ -15,4 +15,10 @@ WORKDIR /usr/src/app
 ADD . /usr/src/app
 RUN npm install -g pino-elasticsearch
 RUN npm install --production
-ENTRYPOINT ["node", "--nouse-idle-notification", "--expose-gc", "--max-old-space-size=8192", "hydra-router.js"]
+ENTRYPOINT [
+  "node",
+    "--nouse-idle-notification",
+    "--expose-gc",
+    "--max-old-space-size=8192"
+  "hydra-router.js"
+]
