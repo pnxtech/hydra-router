@@ -1,6 +1,6 @@
 {
   "name": "hydra-router",
-  "version": "1.5.9",
+  "version": "1.5.11",
   "description": "A service which routes requests to hydra-based microservices",
   "author": {
     "name": "Carlos Justiniano",
@@ -9,6 +9,7 @@
   "private": true,
   "scripts": {
     "start": "node hydra-router.js",
+    "gctrace": "node --nouse-idle-notification --expose-gc --trace-gc --log-gc hydra-router.js",
     "debug": "node --inspect --debug-brk hydra-router.js",
     "test": "mocha specs --reporter spec"
   },
