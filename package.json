@@ -22,7 +22,7 @@
     "debug": "2.6.9",
     "fwsp-logger": "0.3.0",
     "hydra": "1.5.5",
-    "newrelic": "2.4.0",
+    "newrelic": "2.5.0",
     "route-parser": "0.0.5",
     "ws": "3.3.2"
   },
