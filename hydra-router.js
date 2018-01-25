@@ -149,6 +149,17 @@ console.log(`
       ws.on('close', () => {
         serviceRouter.wsDisconnect(ws);
       });
+
+      ws.on('error', (error) => {
+        try {
+          appLogger.info({
+            msg: `error detected from client ${ws.id} on ${ws.ipAddr}`
+          });
+          appLogger.fatal(error);
+        } catch (e) {
+          appLogger.fatal(error);
+        }
+      });
     });
 
     /**
