@@ -1,6 +1,6 @@
 {
   "name": "hydra-router",
-  "version": "1.5.13",
+  "version": "1.6.0",
   "description": "A service which routes requests to hydra-based microservices",
   "author": {
     "name": "Carlos Justiniano",
@@ -11,6 +11,8 @@
     "start": "node hydra-router.js",
     "gctrace": "node --nouse-idle-notification --expose-gc --trace-gc --log-gc hydra-router.js",
     "debug": "node --inspect --debug-brk hydra-router.js",
+    "profile": "node --prof hydra-router.js",
+    "profile-process": "f=$(ls -t isolate*.log | head -n1); node --prof-process \"$f\" > prof-process.log",
     "test": "mocha specs --reporter spec"
   },
   "engines": {
@@ -19,7 +21,6 @@
   "license": "MIT",
   "dependencies": {
     "bluebird": "3.5.0",
-    "debug": "2.6.9",
     "fwsp-logger": "0.3.0",
     "hydra": "1.5.5",
     "newrelic": "2.5.0",
