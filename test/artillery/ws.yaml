@@ -1,10 +1,14 @@
 config:
   target: "ws://localhost:5353"
   phases:
-    - duration: 10
-      arrivalRate: 200
+    - duration: 60
+      arrivalRate: 100
 scenarios:
   - engine: "ws"
     flow:
       - send: '{"to": "hydra-router:[GET]/v1/router/version","from": "client:/","body": {}}'
       - think: 1
+      - send: '{"to": "hydra-router:[GET]/v1/router/health","from": "client:/","body": {}}'
+      - think: 1
+      - send: '{"to": "hydra-router:[GET]/v1/router/list/nodes","from": "client:/","body": {}}'
+      - think: 5

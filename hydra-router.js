@@ -37,13 +37,17 @@ let appLogger;
 
 /**
  * Setup process exit handlers
-*/
+ */
 process.on('cleanup', () => {
-  hydra.shutdown()
+  serviceRouter.shutdown()
     .then(() => {
-      process.exit(-1);
+      hydra.shutdown()
+        .then(() => {
+          process.exit(-1);
+        });
     });
 });
+
 process.on('SIGTERM', () => {
   appLogger && appLogger.fatal('Received SIGTERM');
   process.emit('cleanup');
@@ -80,17 +84,14 @@ hydra.init(`${__dirname}/config/config.json`, false)
   .then((serviceInfo) => {
     let logEntry = `Starting service ${serviceInfo.serviceName}:${hydra.getInstanceVersion()} on ${serviceInfo.serviceIP}:${serviceInfo.servicePort}`;
 
-console.log(`
+    let banner = `
  _   _           _             ____             _
 | | | |_   _  __| |_ __ __ _  |  _ \\ ___  _   _| |_ ___ _ __
 | |_| | | | |/ _\` | '__/ _\` | | |_) / _ \\| | | | __/ _ \\ '__|
 |  _  | |_| | (_| | | | (_| | |  _ < (_) | |_| | ||  __/ |
 |_| |_|\\__, |\\__,_|_|  \\__,_| |_| \\_\\___/ \\__,_|\\__\\___|_|
-       |___/
-`);
-
-    console.log(logEntry);
-    hydra.sendToHealthLog('info', logEntry);
+       |___/`;
+    console.log(banner);
 
     let interfaces = os.networkInterfaces();
     console.log('Detected IPv4 IPs:');
