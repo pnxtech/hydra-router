@@ -1,4 +1,4 @@
-![logo](./hydra-router.png)
+![logo](./assets/hydra-router.png)
 
 Hydra Router is a service-aware HTTP, WebSocket and messaging gateway. It was announced at EmpireNode 2016.
 
