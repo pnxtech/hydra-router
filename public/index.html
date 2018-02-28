@@ -55,10 +55,32 @@
       }
       .instance-info {
         position: relative;
+        top: 5.5rem;
+        font-size: 1rem;
+        text-align: center;
+        color: black;
+      }
+      .filter {
+        position: relative;
         top: 7rem;
         font-size: 1rem;
         text-align: center;
         color: black;
+      }
+      .filter-checkbox {
+        padding: .5rem;
+        border-radius: .5rem;
+        font-size: 2rem;
+      }
+      .search-input {
+        height: 3rem;
+        font-size: 1.8rem;
+        padding: .5rem;
+        border-radius: .5rem;
+        margin: 1rem;
+      }
+      .search-spacer {
+        width: 6rem;
       }
       .table-sep {
         margin-bottom: 4rem;
@@ -202,7 +224,9 @@ class DashboardScreen extends Component {
   constructor(props) {
     super(props);
     this.setState({
-      timerID: 0
+      timerID: 0,
+      searchTerm: '',
+      searchChecked: false
     });
   }
 
@@ -218,6 +242,18 @@ class DashboardScreen extends Component {
 
   componentWillUnmount() {
     clearInterval(this.state.timerID);
+  }
+
+  searchChange(e) {
+    this.setState({
+      searchTerm: e.currentTarget.value
+    });
+  }
+
+  searchDeadServices(e) {
+    this.setState({
+      searchChecked: !this.state.searchChecked
+    });
   }
 
   getNodeData() {
@@ -297,14 +333,28 @@ class DashboardScreen extends Component {
         if (node.serviceName === 'hydra-router') {
           icon = 'glyphicon-random';
         }
-        tiles.push(
-          h(Panel, {icon, title: node.serviceName, titleColor, body: content})
-        );
+
+        let show = true;
+        if (state.searchTerm !== '') {
+          show = (node.serviceName.includes(state.searchTerm));
+        }
+        if (state.searchChecked && node.elapsed > 3) {
+          show = false;
+        }
+        if (show) {
+          tiles.push(
+            h(Panel, {icon, title: node.serviceName, titleColor, body: content})
+          );
+        }
       });
     }
     return (
       h('div', {class: 'container'},
         h('div', {class: 'instance-info'}, `${state.instanceID}`),
+        h('div', {class: 'filter'},
+          h('input', {class: 'search-input', type: 'text', onkeyup: this.searchChange.bind(this)},),
+          h('input', {class: 'filter-checkbox', type: 'checkbox', onClick: this.searchDeadServices.bind(this)}, 'errors')
+        ),
         h('div', {class: 'page-body'}, tiles)
       )
     );
