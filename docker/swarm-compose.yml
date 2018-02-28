@@ -1,0 +1,42 @@
+version: "3.4"
+
+networks:
+  servicenet:
+    driver: overlay
+    ipam:
+      config:
+        -
+          subnet: 10.0.9.0/24
+
+services:
+
+  visualizer:
+    image: dockersamples/visualizer:stable
+    networks:
+      - servicenet
+    ports:
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: ingress
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      replicas: 1
+
+  redis:
+    image: redis:3.0.7
+    networks:
+      servicenet:
+        aliases:
+          - redis
+    ports:
+      - target: 6379
+        published: 6379
+        protocol: tcp
+        mode: ingress
+    volumes:
+      - "~/data/${SWARM_NAME}:/data"
+    deploy:
+      replicas: 1
+
