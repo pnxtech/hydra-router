@@ -25,7 +25,7 @@ services:
       replicas: 1
 
   redis:
-    image: redis:3.0.7
+    image: redis:4.0.8-alpine
     networks:
       servicenet:
         aliases:
