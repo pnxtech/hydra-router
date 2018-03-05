@@ -40,3 +40,24 @@ services:
     deploy:
       replicas: 1
 
+  hmr-svcs:
+    image: flywheelsports/hmr-svcs:1.0.0
+    depends_on:
+      - redis
+      - neo4j
+      - elasticsearch
+    networks:
+      servicenet:
+        aliases:
+          - hmr-svcs
+    extra_hosts:
+      - "host:${HOST_IP}"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        max_attempts: 6
+      resources:
+        limits:
+          memory: 128M
