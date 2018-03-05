@@ -8,11 +8,18 @@ A cluster of Hydra Routers can work together to ensure that messages from micros
 
 Hydra Router is built using the Hydra library. If you'd like to learn more about Hydra visit the [github repo](https://github.com/flywheelsports/hydra) for a list of articles and videos.
 
+### Full documentation
+
+See the full dcumentation at [https://www.hydramicroservice.com/docs/tools/hydra-router/](https://www.hydramicroservice.com/docs/tools/hydra-router/)
+
+### Hydra Router Dashboard
+
+Hydra Router hosts a dashboard showing running microservices.
+
+![logo](./assets/Hydra_Router_Dashboard.png)
 ### Docker Images
 
 You can build and run Hydra-router from source or pull a pre-built Docker image at: [flywheelsports/hydra-router](https://hub.docker.com/r/flywheelsports/hydra-router/tags/)
 
-### Full documentation
 
-See the full dcumentation at [https://www.hydramicroservice.com/docs/tools/hydra-router/](https://www.hydramicroservice.com/docs/tools/hydra-router/)
 
