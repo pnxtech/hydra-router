@@ -40,6 +40,30 @@ services:
     deploy:
       replicas: 1
 
+  hydra-router:
+    image: flywheelsports/hydra-router:1.6.7
+    depends_on:
+      - redis
+      - elasticsearch
+    networks:
+      - servicenet
+    extra_hosts:
+      - "host:${HOST_IP}"
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: ingress
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        max_attempts: 6
+      resources:
+        limits:
+          memory: 256M
+
   hmr-svcs:
     image: flywheelsports/hmr-svcs:1.0.0
     depends_on:
