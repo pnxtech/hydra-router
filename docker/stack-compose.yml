@@ -8,6 +8,10 @@ networks:
         -
           subnet: 10.0.9.0/24
 
+configs:
+  hydra_config:
+    file: ../config/config.json
+
 services:
 
   visualizer:
@@ -47,13 +51,14 @@ services:
       - elasticsearch
     networks:
       - servicenet
-    extra_hosts:
-      - "host:${HOST_IP}"
     ports:
       - target: 80
         published: 80
         protocol: tcp
         mode: ingress
+    configs:
+      - source: hydra_config
+        target: /usr/src/app/config/config.json
     deploy:
       replicas: 1
       restart_policy:
