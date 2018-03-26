@@ -1,4 +1,4 @@
-FROM node:8.9.1-alpine
+FROM node:8.10.0-alpine
 MAINTAINER Carlos Justiniano cjus34@gmail.com
 EXPOSE 80
 HEALTHCHECK --interval=5s --timeout=3s CMD curl -f http://localhost:80/v1/router/health || exit 1
