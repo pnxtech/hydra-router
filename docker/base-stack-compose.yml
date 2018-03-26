@@ -1,0 +1,72 @@
+version: "3.4"
+
+networks:
+  servicenet:
+    driver: overlay
+    ipam:
+      config:
+        -
+          subnet: 10.0.9.0/24
+
+services:
+
+  redis:
+    image: redis:3.2.11-alpine
+    networks:
+      - servicenet
+    ports:
+      - target: 6379
+        published: 6379
+        protocol: tcp
+        mode: ingress
+    volumes:
+      - "~/data/${STACK_NAME}/redis:/data"
+    deploy:
+      replicas: 1
+
+  mongo:
+    image: mongo:3.4.3
+    networks:
+      - servicenet
+    ports:
+      - target: 27017
+        published: 27017
+        protocol: tcp
+        mode: ingress
+    volumes:
+      - "~/data/${STACK_NAME}/mongo:/data/db"
+    deploy:
+      replicas: 1
+
+  elasticsearch:
+    image: elasticsearch:2
+    networks:
+      - servicenet
+    ports:
+      - target: 9200
+        published: 9200
+        protocol: tcp
+        mode: ingress
+      - target: 9300
+        published: 9300
+        protocol: tcp
+        mode: ingress
+    volumes:
+      - "~/data/${STACK_NAME}/elasticsearch:/usr/share/elasticsearch/data"
+    deploy:
+      replicas: 1
+
+  kibana:
+    image: kibana:4
+    depends_on:
+      - elasticsearch
+    networks:
+      - servicenet
+    ports:
+      - target: 5601
+        published: 5601
+        protocol: tcp
+        mode: ingress
+    deploy:
+      replicas: 1
+
