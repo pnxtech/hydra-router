@@ -22,7 +22,7 @@
   "dependencies": {
     "bluebird": "3.5.1",
     "fwsp-logger": "0.3.3",
-    "hydra": "1.6.3",
+    "hydra": "1.6.4",
     "hydra-plugin-hls": "0.2.6",
     "newrelic": "2.9.1",
     "route-parser": "0.0.5",
