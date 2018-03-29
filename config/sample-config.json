@@ -25,6 +25,10 @@
           "port": 9200,
           "index": "hydra"
         }
+      },
+      "hydraLogger": {
+        "logToConsole": true,
+        "onlyLogLocally": false
       }
     },
     "redis": {
