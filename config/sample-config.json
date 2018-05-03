@@ -10,8 +10,8 @@
   "hydra": {
     "serviceName": "hydra-router",
     "serviceDescription": "Service Router",
-    "serviceIP": "host",
-    "servicePort": "5353",
+    "serviceIP": "",
+    "servicePort": "80",
     "serviceType": "router",
     "plugins": {
       "logger": {

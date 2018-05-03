@@ -8,6 +8,14 @@ A cluster of Hydra Routers can work together to ensure that messages from micros
 
 Hydra Router is built using the Hydra library. If you'd like to learn more about Hydra visit the [github repo](https://github.com/flywheelsports/hydra) for a list of articles and videos.
 
+### Running locally
+
+HydraRouter requires access to an instance of Redis. You can place the connection info inside of the ./config/config.json file. If you don't have a config.json file you can simply copy the existing sample-config.json to config.json.
+
+An important point is that as configured the location of Redis is set to `redis://host:6379/15` You'll need a DNS entry to point host to the ip address where Redis is located or simply replace the host string to another entry.
+
+The provided sample-config.json file is sets Hydra-router to use port 80. You'll need to use sudo to launch HydraRouter or change the port to an available port number above 1024.
+
 ### Full documentation
 
 See the full dcumentation at [https://www.hydramicroservice.com/docs/tools/hydra-router/](https://www.hydramicroservice.com/docs/tools/hydra-router/)
