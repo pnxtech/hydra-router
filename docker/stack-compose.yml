@@ -19,7 +19,7 @@ configs:
 services:
 
   hydra-router:
-    image: flywheelsports/hydra-router:1.6.8
+    image: flywheelsports/hydra-router:1.6.10
     depends_on:
       - redis
       - hydra-logging-svcs

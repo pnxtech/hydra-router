@@ -76,6 +76,11 @@ let displayNetworkInterfaces = () => {
 let setupRoutes = async(config) => {
   let routeList = [
     '[get]/',
+    '[get]/index.css',
+    '[get]/index.js',
+    '[get]/fonts/glyphicons-halflings-regular.woff2',
+    '[get]/fonts/glyphicons-halflings-regular.woff',
+    '[get]/fonts/glyphicons-halflings-regular.ttf',
     '[get]/v1/router/health',
     '[get]/v1/router/list/:thing',
     '[get]/v1/router/version',
