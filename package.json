@@ -16,7 +16,7 @@
     "test": "mocha specs --reporter spec"
   },
   "engines": {
-    "node": ">=6.9.2"
+    "node": ">=8.11.0"
   },
   "license": "MIT",
   "dependencies": {
