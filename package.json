@@ -1,6 +1,6 @@
 {
   "name": "hydra-router",
-  "version": "1.6.10",
+  "version": "1.6.14-experimental",
   "description": "A service which routes requests to hydra-based microservices",
   "author": {
     "name": "Carlos Justiniano",
@@ -22,9 +22,9 @@
   "dependencies": {
     "bluebird": "3.5.1",
     "fwsp-logger": "0.3.3",
-    "hydra": "1.6.4",
+    "hydra": "1.7.0",
     "hydra-plugin-hls": "0.2.6",
-    "newrelic": "2.9.1",
+    "newrelic": "4.8.0",
     "route-parser": "0.0.5",
     "ws": "5.0.0"
   },

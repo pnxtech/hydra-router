@@ -14,12 +14,12 @@ configs:
   hydra_logging_svcs_config:
     file: ../config/hydra-logging-svcs.conf
   hydra_router_config:
-    file: ../config/config.json
+    file: ../config/hr-test-config.json
 
 services:
 
   hydra-router:
-    image: flywheelsports/hydra-router:1.6.10
+    image: flywheelsports/hydra-router:1.6.14
     depends_on:
       - redis
       - hydra-logging-svcs

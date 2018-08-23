@@ -1,0 +1,43 @@
+{
+  "externalRoutes": {},
+  "routerToken": "",
+  "disableRouterEndpoint": false,
+  "debugLogging": true,
+  "queuerDB": 0,
+  "requestTimeout": 30,
+  "rateLimiter": {
+    "db": 14,
+    "limit": -1,
+    "duration": 60
+  },
+  "forceMessageSignature": false,
+  "signatureSharedSecret": "d632dd6d-fb75-44cc-bdbf-ee1364f3716c",
+  "hydra": {
+    "serviceName": "hydra-router",
+    "serviceDescription": "Service Router",
+    "serviceIP": "",
+    "servicePort": "80",
+    "serviceType": "router",
+    "plugins": {
+      "logger": {
+        "logRequests": true,
+        "noFile": true,
+        "toConsole": true,
+        "redact": ["password"],
+        "elasticsearch": {
+          "rotate": "daily",
+          "host": "host",
+          "port": 9200,
+          "index": "hydra"
+        }
+      },
+      "hydraLogger": {
+        "logToConsole": true,
+        "onlyLogLocally": false
+      }
+    },
+    "redis": {
+      "url": "redis://host:6379/15"
+    }
+  }
+}
