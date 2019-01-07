@@ -1,6 +1,7 @@
-FROM node:8.10.0-alpine
-MAINTAINER Carlos Justiniano cjus34@gmail.com
+FROM node:8.11-alpine
+LABEL maintainer="Carlos Justiniano cjus34@gmail.com"
 EXPOSE 80
+ENV UV_THREADPOOL_SIZE 64
 HEALTHCHECK --interval=5s --timeout=3s CMD curl -f http://localhost:80/v1/router/health || exit 1
 RUN apk add --update \
     curl \

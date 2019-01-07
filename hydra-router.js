@@ -205,9 +205,12 @@ let main = async() => {
     if (config.hydra.plugins && config.hydra.plugins.logger) {
       loggerType = 'logger';
       HydraLogger = require('fwsp-logger').HydraLogger;
-    } else {
+    } else if (config.hydra.plugins && config.hydra.plugins.hydraLogger) {
       HydraLogger = require('hydra-plugin-hls/hydra');
       loggerType = 'hydra';
+    } else if (config.hydra.plugins && config.hydra.plugins.loggly) {
+      HydraLogger = require('hydra-plugin-loggly/hydra');
+      loggerType = 'loggly';
     }
     let hydraLogger = new HydraLogger();
     hydra.use(hydraLogger);
