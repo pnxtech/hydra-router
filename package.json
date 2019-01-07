@@ -24,6 +24,7 @@
     "fwsp-logger": "0.3.3",
     "hydra": "1.7.0",
     "hydra-plugin-hls": "0.2.6",
+    "hydra-plugin-loggly": "0.1.10",
     "newrelic": "4.8.0",
     "route-parser": "0.0.5",
     "ws": "5.0.0"

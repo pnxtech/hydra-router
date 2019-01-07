@@ -29,6 +29,15 @@
       "hydraLogger": {
         "logToConsole": true,
         "onlyLogLocally": false
+      },
+      "loggly": {
+        "method": "POST",
+        "protocol": "http",
+        "hostname": "logs-01.loggly.com",
+        "port": 80,
+        "path": "/inputs/{token-here}/tag/http/",
+        "logToConsole": true,
+        "onlyLogLocally": false
       }
     },
     "redis": {

@@ -19,7 +19,7 @@
     "servicePort": "80",
     "serviceType": "router",
     "plugins": {
-      "logger": {
+      "dontuse-logger": {
         "logRequests": true,
         "noFile": true,
         "toConsole": true,
@@ -31,7 +31,16 @@
           "index": "hydra"
         }
       },
-      "hydraLogger": {
+      "dontuse-hydraLogger": {
+        "logToConsole": true,
+        "onlyLogLocally": false
+      },
+      "loggly": {
+        "method": "POST",
+        "protocol": "http",
+        "hostname": "logs-01.loggly.com",
+        "port": 80,
+        "path": "/inputs/{token-here}/tag/http/",
         "logToConsole": true,
         "onlyLogLocally": false
       }
