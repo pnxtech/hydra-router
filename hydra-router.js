@@ -202,6 +202,8 @@ let main = async() => {
     let config = require('./config/config.json');
     HydraLogger = require('fwsp-logger').HydraLogger;
 
+    let newConfig = await hydra.init(`${__dirname}/config/config.json`, false);
+    config = newConfig;
     if (config.hydra.plugins && config.hydra.plugins.logger) {
       loggerType = 'logger';
       HydraLogger = require('fwsp-logger').HydraLogger;
@@ -215,8 +217,6 @@ let main = async() => {
     let hydraLogger = new HydraLogger();
     hydra.use(hydraLogger);
 
-    let newConfig = await hydra.init(`${__dirname}/config/config.json`, false);
-    config = newConfig;
     let serviceInfo = await hydra.registerService();
     let logEntry = `Starting service ${serviceInfo.serviceName}:${hydra.getInstanceVersion()} on ${serviceInfo.serviceIP}:${serviceInfo.servicePort}`;
 
