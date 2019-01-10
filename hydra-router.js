@@ -217,6 +217,7 @@ let main = async() => {
 
     let newConfig = await hydra.init(`${__dirname}/config/config.json`, false);
     config = newConfig;
+
     let serviceInfo = await hydra.registerService();
     let logEntry = `Starting service ${serviceInfo.serviceName}:${hydra.getInstanceVersion()} on ${serviceInfo.serviceIP}:${serviceInfo.servicePort}`;
 
@@ -225,6 +226,12 @@ let main = async() => {
       hydra.log = (type, message) => {
         appLogger[type](message);
       };
+    }
+
+    if (loggerType === 'loggly') {
+      hydraLogger.setHydra(hydra);
+      hydraLogger.setConfig(config.hydra);
+      hydraLogger.onServiceReady();
     }
 
     setupExitHandlers();
