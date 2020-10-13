@@ -27,7 +27,10 @@ Hydra Router hosts a dashboard showing running microservices.
 ![logo](./assets/Hydra_Router_Dashboard.png)
 ### Docker Images
 
-You can build and run Hydra-router from source or pull a pre-built Docker image at: [flywheelsports/hydra-router](https://hub.docker.com/r/flywheelsports/hydra-router/tags/)
+You can build and run Hydra-router from source or pull a pre-built Docker image
+
+* Release 1.7.0 and newer : [pnxtech/hydra-router](https://hub.docker.com/r/pnxtech/hydra-router/tags/)
+* Release 1.7.0 and earlier : [flywheelsports/hydra-router](https://hub.docker.com/r/flywheelsports/hydra-router/tags/)
 
 
 
