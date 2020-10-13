@@ -7,6 +7,13 @@
   "requestTimeout": 5,
   "forceMessageSignature": false,
   "signatureSharedSecret": "d632dd6d-fb75-44cc-bdbf-ee1364f3716c",
+  "cors": {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "access-control-allow-headers": "accept, authorization, cache-control, content-type, x-requested-with",
+    "access-control-allow-credentials": "true",
+    "access-control-Max-Age": 10
+  },
   "hydra": {
     "serviceName": "hydra-router",
     "serviceDescription": "Service Router",

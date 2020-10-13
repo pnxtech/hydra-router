@@ -19,10 +19,10 @@ configs:
 services:
 
   hydra-router:
-    image: flywheelsports/hydra-router:1.6.14-experimental
-    depends_on:
-      - redis
-      - hydra-logging-svcs
+    image: hydra-router:1.8.0
+    # depends_on:
+    #   - redis
+    #   - hydra-logging-svcs
     networks:
       - servicenet
     extra_hosts:
@@ -66,24 +66,24 @@ services:
   #       limits:
   #         memory: 128M
 
-  hmr-svcs:
-    image: flywheelsports/hmr-svcs:1.0.3
-    depends_on:
-      - redis
-    networks:
-      - servicenet
-    extra_hosts:
-      - "host:${HOST_IP}"
-    configs:
-      - source: hmr_svcs_config
-        target: /usr/src/app/config/config.json
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-        delay: 15s
-        max_attempts: 6
-      resources:
-        limits:
-          memory: 128M
+  # hmr-svcs:
+  #   image: flywheelsports/hmr-svcs:1.0.3
+  #   depends_on:
+  #     - redis
+  #   networks:
+  #     - servicenet
+  #   extra_hosts:
+  #     - "host:${HOST_IP}"
+  #   configs:
+  #     - source: hmr_svcs_config
+  #       target: /usr/src/app/config/config.json
+  #   deploy:
+  #     replicas: 1
+  #     restart_policy:
+  #       condition: on-failure
+  #       delay: 15s
+  #       max_attempts: 6
+  #     resources:
+  #       limits:
+  #         memory: 128M
 
