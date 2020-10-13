@@ -25,6 +25,7 @@ See the full dcumentation at [https://www.hydramicroservice.com/docs/tools/hydra
 Hydra Router hosts a dashboard showing running microservices.
 
 ![logo](./assets/Hydra_Router_Dashboard.png)
+
 ### Docker Images
 
 You can build and run Hydra-router from source or pull a pre-built Docker image
