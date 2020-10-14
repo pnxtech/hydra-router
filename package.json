@@ -1,6 +1,6 @@
 {
   "name": "hydra-router",
-  "version": "1.8.0",
+  "version": "1.8.2",
   "description": "A service which routes requests to hydra-based microservices",
   "author": {
     "name": "Carlos Justiniano",
@@ -25,7 +25,6 @@
     "hydra": "1.8.2",
     "hydra-plugin-hls": "0.2.6",
     "hydra-plugin-loggly": "0.1.10",
-    "newrelic": "4.8.0",
     "route-parser": "0.0.5",
     "ws": "5.0.0"
   },

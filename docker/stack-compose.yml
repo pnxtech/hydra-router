@@ -17,12 +17,46 @@ configs:
     file: ../config/hr-test-config.json
 
 services:
+  redis:
+    image: redis:6.0.6
+    networks:
+      - servicenet
+    ports:
+      - target: 6379
+        published: 6379
+        protocol: tcp
+        mode: ingress
+    deploy:
+      replicas: 1
+
+  hydra-logging-svcs:
+    image: pnxtech/hydra-logging-svcs:0.3.0
+    depends_on:
+      - redis
+    networks:
+      - servicenet
+    extra_hosts:
+      - "host:${HOST_IP}"
+    configs:
+      - source: hydra_logging_svcs_config
+        target: /usr/src/app/config/config.json
+    volumes:
+      - ./logs:/logs
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        max_attempts: 6
+      resources:
+        limits:
+          memory: 128M
 
   hydra-router:
-    image: hydra-router:1.8.0
-    # depends_on:
-    #   - redis
-    #   - hydra-logging-svcs
+    image: hydra-router:1.8.2
+    depends_on:
+      - redis
+      - hydra-logging-svcs
     networks:
       - servicenet
     extra_hosts:
@@ -44,27 +78,6 @@ services:
       # resources:
       #   limits:
       #     memory: 256M
-
-  # hydra-logging-svcs:
-  #   image: flywheelsports/hydra-logging-svcs:0.2.4
-  #   depends_on:
-  #     - redis
-  #   networks:
-  #     - servicenet
-  #   extra_hosts:
-  #     - "host:${HOST_IP}"
-  #   configs:
-  #     - source: hydra_logging_svcs_config
-  #       target: /usr/src/app/config/config.json
-  #   deploy:
-  #     replicas: 1
-  #     restart_policy:
-  #       condition: on-failure
-  #       delay: 15s
-  #       max_attempts: 6
-  #     resources:
-  #       limits:
-  #         memory: 128M
 
   # hmr-svcs:
   #   image: flywheelsports/hmr-svcs:1.0.3

@@ -4,11 +4,6 @@ EXPOSE 80
 ENV UV_THREADPOOL_SIZE 64
 RUN apk add --update \
     curl \
-    python \
-    python-dev \
-    py-pip \
-    build-base \
-  && pip install virtualenv \
   && rm -rf /var/cache/apk/*
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app

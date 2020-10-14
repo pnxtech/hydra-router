@@ -5,11 +5,6 @@ ENV UV_THREADPOOL_SIZE 64
 HEALTHCHECK --interval=5s --timeout=3s CMD curl -f http://localhost:80/v1/router/health || exit 1
 RUN apk add --update \
     curl \
-    python \
-    python-dev \
-    py-pip \
-    build-base \
-  && pip install virtualenv \
   && rm -rf /var/cache/apk/*
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app

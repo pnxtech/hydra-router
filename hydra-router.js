@@ -4,10 +4,6 @@
 */
 'use strict';
 
-if (process.env.NEW_RELIC_LICENSE_KEY) {
-  require('newrelic');
-}
-
 const hydra = require('hydra');
 const serviceRouter = require('./lib/servicerouter');
 
