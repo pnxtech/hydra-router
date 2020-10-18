@@ -237,7 +237,7 @@ let main = async() => {
     await setupRoutes(config);
 
     hydra.log('info', {
-      msg: logEntry
+      message: logEntry
     });
 
     setupHydraListeners();
