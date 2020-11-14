@@ -11,8 +11,4 @@ echo "\nStarting core services"
 
 sudo STACK_NAME=${STACK_NAME} HOST_IP=${HOST_IP} docker stack deploy --compose-file stack-compose.yml --with-registry-auth ${STACK_NAME}
 
-#echo "\nClearing old services"
-#./countdown.sh 10
-#hydra-cli refresh node list
-
 echo "\nopen http://localhost:5353"
