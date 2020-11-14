@@ -6,7 +6,12 @@ HTTP and WebSocket clients can connect to Hydra Router to send messages to Hydra
 
 A cluster of Hydra Routers can work together to ensure that messages from microservices can be routed back to connected clients.
 
-Hydra Router is built using the Hydra library. If you'd like to learn more about Hydra visit the [github repo](https://github.com/flywheelsports/hydra) for a list of articles and videos.
+Hydra Router is built using the Hydra library. If you'd like to learn more about Hydra visit the [github repo](https://github.com/pnxtech/hydra) for a list of articles and videos.
+
+```diff
+- HydraRouter version 1.9.0 includes a breaking change. The fwsp-logger is no longer a supported logging plugin due to lack of ongoing support.
+- You can use HydraRouter versions 1.8.0 < 1.9.0 if you require fwsp-logger support.
+```
 
 ### Running locally
 

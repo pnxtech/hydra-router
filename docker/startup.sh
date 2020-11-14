@@ -5,7 +5,7 @@ export HOST_IP=`echo "show State:/Network/Global/IPv4" | scutil | grep PrimaryIn
 echo "Binding ${STACK_NAME} to ${HOST_IP}"
 
 sudo -- sh -c -e "echo '$HOST_IP\thost' >> /etc/hosts"
-mkdir -p ~/logs ~/data/${STACK_NAME}/redis
+mkdir -p ./logs ~/data/${STACK_NAME}/redis
 
 echo "\nStarting core services"
 
