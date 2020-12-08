@@ -87,7 +87,8 @@ let setupRoutes = async(config) => {
     '[get]/v1/router/stats',
     '[post]/v1/router/message',
     '[post]/v1/router/send',
-    '[post]/v1/router/queue'
+    '[post]/v1/router/queue',
+    '[post]/v1/router/stream/:name'
   ];
   await hydra.registerRoutes(routeList);
   let routesObj = await hydra.getAllServiceRoutes();
