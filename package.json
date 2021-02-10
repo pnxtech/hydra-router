@@ -1,6 +1,6 @@
 {
   "name": "hydra-router",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "description": "A service which routes requests to hydra-based microservices",
   "author": {
     "name": "Carlos Justiniano",
