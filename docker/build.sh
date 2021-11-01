@@ -1,4 +1,5 @@
 VERSION_TAG=$(<VERSION)
 cd ..
 rm -rf node_modules
-docker build --no-cache=true -t hydra-router:$VERSION_TAG .
+docker buildx build --platform=linux/amd64 --load --no-cache -t hydra-router:$VERSION_TAG .
+ 

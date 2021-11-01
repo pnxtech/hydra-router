@@ -1,4 +1,4 @@
-FROM node:12-alpine
+FROM node:16-alpine
 LABEL maintainer="Carlos Justiniano cjus@ieee.org"
 EXPOSE 80
 ENV UV_THREADPOOL_SIZE 64
