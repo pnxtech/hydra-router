@@ -13,3 +13,7 @@ Tear down test environment.
 
 Build and deploy your own hydra-router container.
 
+## Building and deploying a container for docker hub
+See the instructions here for proper setup of docker/buildx: https://www.docker.com/blog/multi-arch-images/
+Then run the build.sh script.
+
