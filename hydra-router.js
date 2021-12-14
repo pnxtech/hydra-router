@@ -143,12 +143,37 @@ let setupServer = (config, serviceInfo) => {
  * @name setupWebSocketServer
  * @description setup websocket server
  * @param {object} server - http server to bind to
+ * @param {object} config - server config
  * @return {undefined}
  */
 let setupWebSocketServer = (server) => {
   const WebSocketServer = require('ws').Server;
-  let wss = new WebSocketServer({server: server});
-  wss.on('connection', (ws, req) => {
+  let wss = new WebSocketServer({
+    server,
+    auth: 'usr:pass#'
+  });
+
+  wss.on('connection', async (ws, req) => {
+    const config = serviceRouter.getConfig();
+    if (config.requireWebsocketAuth) {
+      try {
+        const auth = Buffer.from(req.headers.authorization.slice(6), 'base64').toString();
+        if (auth) {
+          const response = await serviceRouter.wsAuthenticate(auth);
+          if (response.statusCode !== 200) {
+            serviceRouter.wsDisconnect(ws);
+            return;
+          }
+          ws.authResponse = response.result;
+        } else {
+          serviceRouter.wsDisconnect(ws);
+          return;
+        }
+      } catch (e) {
+        serviceRouter.wsDisconnect(ws);
+        return;
+      }
+    }
     serviceRouter.sendConnectMessage(ws, null, req);
 
     ws.on('message', (message) => {
