@@ -53,7 +53,7 @@ services:
           memory: 128M
 
   hydra-router:
-    image: hydra-router:1.9.10
+    image: hydra-router:1.9.11
     volumes:
       - "/etc/localtime:/etc/localtime:ro"
     depends_on:
