@@ -157,19 +157,28 @@ let setupWebSocketServer = (server) => {
     const config = serviceRouter.getConfig();
     if (config.requireWebsocketAuth) {
       try {
-        const auth = Buffer.from(req.headers.authorization.slice(6), 'base64').toString();
+        let auth;
+        if (req.headers.authorization) {
+          auth = Buffer.from(req.headers.authorization.slice(6), 'base64').toString();
+        } else if (req.url && req.url.length >1) {
+          auth = req.url;
+        }
+        // parse the auth string if provided
         if (auth) {
           const response = await serviceRouter.wsAuthenticate(auth);
           if (response.statusCode !== 200) {
+            hydra.log('error', 'Invalid auth api response');
             serviceRouter.wsDisconnect(ws);
             return;
           }
           ws.authResponse = response.result;
         } else {
+          hydra.log('error', 'Auth must be provided on connection');
           serviceRouter.wsDisconnect(ws);
           return;
         }
       } catch (e) {
+        hydra.log('error', e);
         serviceRouter.wsDisconnect(ws);
         return;
       }
