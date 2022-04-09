@@ -160,7 +160,7 @@ let setupWebSocketServer = (server) => {
         let auth;
         if (req.headers.authorization) {
           auth = Buffer.from(req.headers.authorization.slice(6), 'base64').toString();
-        } else if (req.url && req.url.length >1) {
+        } else if (req.url && req.url.length > 1) {
           auth = req.url;
         }
         // parse the auth string if provided
