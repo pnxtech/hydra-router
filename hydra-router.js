@@ -16,7 +16,7 @@ let setupExitHandlers = () => {
   process.on('cleanup', async() => {
     await serviceRouter.shutdown();
     await hydra.shutdown();
-    process.exit(-1);
+    process.exit(1);
   });
 
   process.on('SIGTERM', () => {
