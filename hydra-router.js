@@ -228,11 +228,13 @@ let displayBanner = () => {
  * @return {undefined}
  */
 let main = async() => {
-  try {
-    let HydraLogger;
-    let loggerType = '';
+  let HydraLogger,
+    loggerType,
+    hydraLogger,
+    config;
 
-    let config = require('./config/config.json');
+  try {
+    config = require('./config/config.json');
 
     if (config.hydra.plugins && config.hydra.plugins.hydraLogger) {
       HydraLogger = require('hydra-plugin-hls/hydra');
@@ -241,12 +243,18 @@ let main = async() => {
       HydraLogger = require('hydra-plugin-loggly/hydra');
       loggerType = 'loggly';
     }
-    let hydraLogger = new HydraLogger();
+    hydraLogger = new HydraLogger();
     hydra.use(hydraLogger);
 
     let newConfig = await hydra.init(`${__dirname}/config/config.json`, false);
     config = newConfig;
+  } catch (err) {
+    let stack = err.stack;
+    console.log(stack); // console log because Logger isn't available in this case.
+    process.exit(1);
+  }
 
+  try {
     let serviceInfo = await hydra.registerService();
     let logEntry = `Starting service ${serviceInfo.serviceName}:${hydra.getInstanceVersion()} on ${serviceInfo.serviceIP}:${serviceInfo.servicePort}`;
 
