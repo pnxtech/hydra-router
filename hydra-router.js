@@ -4,6 +4,9 @@
 */
 'use strict';
 
+if (process.env.HYDRA_ROUTER_ENV) {
+  require('dotenv').config({path: process.env.HYDRA_ROUTER_ENV});
+}
 const hydra = require('hydra');
 const serviceRouter = require('./lib/servicerouter');
 
@@ -153,7 +156,7 @@ let setupWebSocketServer = (server) => {
     auth: 'usr:pass#'
   });
 
-  wss.on('connection', async (ws, req) => {
+  wss.on('connection', async(ws, req) => {
     const config = serviceRouter.getConfig();
     if (config.requireWebsocketAuth) {
       try {
@@ -206,6 +209,50 @@ let setupWebSocketServer = (server) => {
   });
 };
 
+let updateConfigWithEnv = (config) => {
+  if (process.env.HYDRA_ROUTER_ROUTERTOKEN)
+    config.routerToken = process.env.HYDRA_ROUTER_ROUTERTOKEN;
+  if (process.env.HYDRA_ROUTER_ROUTERTOKEN)
+     config.disableRouterEndpoint = process.env.HYDRA_ROUTER_ROUTERTOKEN;
+  if (process.env.HYDRA_ROUTER_DEBUGLOGGING)
+    config.debugLogging = process.env.HYDRA_ROUTER_DEBUGLOGGING;
+  if (process.env.HYDRA_ROUTER_QUEUERDB)
+    config.queuerDB = process.env.HYDRA_ROUTER_QUEUERDB;
+  if (process.env.HYDRA_ROUTER_REQUESTTIMEOUT)
+    config.requestTimeout = process.env.HYDRA_ROUTER_REQUESTTIMEOUT;
+  if (process.env.HYDRA_ROUTER_FORCEMESSAGESIGNATURE)
+    config.forceMessageSignature = process.env.HYDRA_ROUTER_FORCEMESSAGESIGNATURE;
+  if (process.env.HYDRA_ROUTER_SIGNATURESHAREDSECRET)
+    config.signatureSharedSecret = process.env.HYDRA_ROUTER_SIGNATURESHAREDSECRET;
+  if (process.env.HYDRA_ROUTER_CORS) {
+    if (!config.cors) {
+      config.cors = {};
+    }
+    config.cors['access-control-allow-origin'] = process.env.HYDRA_ROUTER_CORS_ACCESS_CONTROL_ALLOW_ORIGIN || config.cors['access-control-allow-origin'];
+    config.cors['access-control-allow-methods'] = process.env.HYDRA_ROUTER_CORS_ACCESS_CONTROL_ALLOW_METHODS || config.cors['access-control-allow-methods'];
+    config.cors['access-control-allow-headers'] = process.env.HYDRA_ROUTER_CORS_ACCESS_CONTROL_ALLOW_HEADERS || config.cors['access-control-allow-headers'];
+    config.cors['access-control-allow-credentials'] = process.env.HYDRA_ROUTER_CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS || config.cors['access-control-allow-credentials'];
+    config.cors['access-control-Max-Age'] = process.env.HYDRA_ROUTER_CORS_ACCESS_CONTROL_MAX_AGE || config.cors['access-control-Max-Age'];
+  }
+  config.hydra.serviceName = process.env.HYDRA_ROUTER_HYDRA_SERVICENAME || config.hydra.serviceName;
+  config.hydra.serviceDescription = process.env.HYDRA_ROUTER_HYDRA_SERVICEDESCRIPTION || config.hydra.serviceDescription;
+  config.hydra.serviceIP = process.env.HYDRA_ROUTER_HYDRA_SERVICEIP || config.hydra.serviceIP;
+  config.hydra.serviceDNS = process.env.HYDRA_ROUTER_HYDRA_SERVICEDNS || config.hydra.serviceDNS;
+  config.hydra.servicePort = process.env.HYDRA_ROUTER_HYDRA_SERVICEPORT || config.hydra.servicePort;
+  config.hydra.serviceType = process.env.HYDRA_ROUTER_HYDRA_SERVICETYPE || config.hydra.serviceType;
+  if (process.env.HYDRA_ROUTER_HYDRA_PLUGINS) {
+    if (!config.hydra.plugins) {
+      config.hydra.plugins = {
+        hydraLogger: {}
+      };
+    }
+    config.hydra.plugins.hydraLogger.logToConsole = process.env.HYDRA_ROUTER_HYDRA_PLUGINS_HYDRALOGGER_LOGTOCONSOLE || config.hydra.hydraLogger.logToConsole;
+    config.hydra.plugins.hydraLogger.onlyLogLocally = process.env.HYDRA_ROUTER_HYDRA_PLUGINS_HYDRALOGGER_ONLYLOGLOCALLY || config.hydra.hydraLogger.onlyLogLocally;
+  }
+  config.hydra.redis.url = process.env.HYDRA_ROUTER_HYDRA_REDIS_URL || config.hydra.redis.url;
+  return config;
+};
+
 /**
  * @name displayBanner
  * @description display fancy banner
@@ -246,7 +293,13 @@ let main = async() => {
     hydraLogger = new HydraLogger();
     hydra.use(hydraLogger);
 
-    let newConfig = await hydra.init(`${__dirname}/config/config.json`, false);
+    let newConfig = '';
+    if (process.env.HYDRA_ROUTER_ENV) {
+      newConfig = updateConfigWithEnv(config);
+      newConfig = await hydra.init(newConfig, false);
+    } else {
+      newConfig = await hydra.init(`${__dirname}/config/config.json`, false);
+    }
     config = newConfig;
   } catch (err) {
     let stack = err.stack;

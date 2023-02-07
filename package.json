@@ -1,6 +1,6 @@
 {
   "name": "hydra-router",
-  "version": "1.9.13",
+  "version": "1.9.14",
   "description": "A service which routes requests to hydra-based microservices",
   "author": {
     "name": "Carlos Justiniano",
@@ -21,6 +21,7 @@
   "license": "MIT",
   "dependencies": {
     "bluebird": "3.5.1",
+    "dotenv": "16.0.3",
     "hydra": "1.9.2",
     "hydra-plugin-hls": "0.2.6",
     "hydra-plugin-loggly": "0.1.13",

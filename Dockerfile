@@ -1,4 +1,4 @@
-FROM node:16-alpine
+FROM node:18.14-alpine
 LABEL maintainer="Carlos Justiniano cjus@ieee.org"
 EXPOSE 80
 ENV UV_THREADPOOL_SIZE 64
@@ -9,5 +9,5 @@ RUN apk add --update \
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 ADD . /usr/src/app
-RUN npm install --production
+RUN npm install --omit=dev
 ENTRYPOINT ["node", "--nouse-idle-notification", "--expose-gc", "--max-old-space-size=8192", "hydra-router.js"]
