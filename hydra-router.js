@@ -209,7 +209,7 @@ let setupWebSocketServer = (server) => {
   });
 };
 
-let updateConfigWithEnv = (config) => {
+let updateConfigWithEnv = async(config) => {
   if (process.env.HYDRA_ROUTER_ROUTERTOKEN)
     config.routerToken = process.env.HYDRA_ROUTER_ROUTERTOKEN;
   if (process.env.HYDRA_ROUTER_ROUTERTOKEN)
@@ -237,6 +237,9 @@ let updateConfigWithEnv = (config) => {
   config.hydra.serviceName = process.env.HYDRA_ROUTER_HYDRA_SERVICENAME || config.hydra.serviceName;
   config.hydra.serviceDescription = process.env.HYDRA_ROUTER_HYDRA_SERVICEDESCRIPTION || config.hydra.serviceDescription;
   config.hydra.serviceIP = process.env.HYDRA_ROUTER_HYDRA_SERVICEIP || config.hydra.serviceIP;
+  if (process.env.HYDRA_ROUTER_HYDRA_SERVICEINTERFACE) {
+    config.hydra.serviceInterface = process.env.HYDRA_ROUTER_HYDRA_SERVICEINTERFACE || config.hydra.serviceInterface;
+  }
   config.hydra.serviceDNS = process.env.HYDRA_ROUTER_HYDRA_SERVICEDNS || config.hydra.serviceDNS;
   config.hydra.servicePort = process.env.HYDRA_ROUTER_HYDRA_SERVICEPORT || config.hydra.servicePort;
   config.hydra.serviceType = process.env.HYDRA_ROUTER_HYDRA_SERVICETYPE || config.hydra.serviceType;
@@ -295,7 +298,7 @@ let main = async() => {
 
     let newConfig = '';
     if (process.env.HYDRA_ROUTER_ENV) {
-      newConfig = updateConfigWithEnv(config);
+      newConfig = await updateConfigWithEnv(config);
       newConfig = await hydra.init(newConfig, false);
     } else {
       newConfig = await hydra.init(`${__dirname}/config/config.json`, false);
@@ -338,6 +341,8 @@ let main = async() => {
 
     let server = await setupServer(config, serviceInfo);
     setupWebSocketServer(server);
+
+    console.log(logEntry);
 
     if (global.gc) {
       global.gc();
